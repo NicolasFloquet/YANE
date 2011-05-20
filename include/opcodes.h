@@ -1,3 +1,6 @@
+#ifndef _ROM_H
+#define _ROM_H
+
 typedef enum {
 	AM_NONE,
 	AM_REL,
@@ -82,3 +85,4 @@ typedef struct {
     Instruction_Index inst;
 }OpCode;
 
+#endif /* _ROM_H */
