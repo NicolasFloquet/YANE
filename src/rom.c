@@ -28,6 +28,9 @@ void print_header(ROM_HEADER* header) {
 	printf("ROM Control byte #2:\t0x%x\n", header->rom_ctrl2 & 0xF);
 	printf("Mapper:\t0x%x%x\n\n",(header->rom_ctrl1&0xF0)>>4, (header->rom_ctrl1&0xF0)>>4);
 	
+	printf("unused1: 0x%x\n", header->unused1);
+	printf("unused2: 0x%x\n", header->unused2);
+	
 	switch(header->info) {
 		case 0:
 			printf("This ROM is 100%% compatible with NTSC console\n");

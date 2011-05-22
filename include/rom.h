@@ -20,7 +20,7 @@ typedef struct {
 	
 	uchar info;
 	
-	uchar unused3[6];
+	uchar unused3[5];
 	
 }ROM_HEADER;
 

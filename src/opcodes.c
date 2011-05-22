@@ -1,4 +1,4 @@
-#include <opcodes.h>
+#include "../include/opcodes.h"
 
 Instruction instruction_list[57]={
 	{"UNK"},
@@ -17,7 +17,7 @@ Instruction instruction_list[57]={
 
 };
 
-OpCode opcode_list[256]={
+OpCode opcode_list[0x100]={
     {0x0, AM_NONE, I_BRK},
     {0x1, AM_INDX, I_ORA},
     {0x2,0,0}, /* UNUSED */
@@ -276,3 +276,67 @@ OpCode opcode_list[256]={
     {0xff,0,0},/* UNUSED */ 
 };
 
+void disassemble(FILE* fd) {
+	unsigned char opcode;
+	int offset = 0;
+	int i = 0;
+	printf("----- STARTING DISASSEMBLY -----\n");
+	
+	fseek(fd, 0x8050, SEEK_SET);
+	printf("fseeked\n");
+	while(i<32)
+	{
+		opcode = fgetc(fd);
+		printf("0x%x\t%s\t",offset, instruction_list[opcode_list[opcode].inst].name, opcode);
+		offset++;
+		
+		switch(opcode_list[opcode].mode) {
+			case AM_NONE:
+				break;
+			case AM_REL:
+				printf("$%x", fgetc(fd));
+				offset++;
+				break;
+			case AM_IMM:
+				printf("$%x%x",fgetc(fd), fgetc(fd));
+				offset+=2;
+				break;
+			case AM_ZERO:
+				printf("$%x", fgetc(fd));
+				offset++;
+				break;
+			case AM_ABS:
+				printf("$%x%x",fgetc(fd), fgetc(fd));
+				offset+=2;
+				break;
+			case AM_ZEROX:
+				printf("$%x", fgetc(fd));
+				offset++;
+				break;
+			case AM_ZEROY:
+				printf("$%x", fgetc(fd));
+				offset++;
+				break;
+			case AM_ABSX:
+				printf("(X)+$%x%x",fgetc(fd), fgetc(fd));
+				offset+=2;
+				break;
+			case AM_ABSY:
+				printf("(Y)+$%x%x",fgetc(fd), fgetc(fd));
+				offset+=2;
+				break;
+			case AM_INDX:
+				printf("($%x)", fgetc(fd));
+				offset++;
+				break;
+			case AM_INDY:
+				printf("($%x)", fgetc(fd));
+				offset++;
+				break;
+			default:
+				printf("Wait... wut? (0x%x)",opcode_list[opcode].mode);
+		}
+		printf("\n");
+		i++;
+	}
+}

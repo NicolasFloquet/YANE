@@ -1,6 +1,8 @@
 #ifndef _ROM_H
 #define _ROM_H
 
+#include <stdio.h>
+
 typedef enum {
 	AM_NONE,
 	AM_REL,
@@ -84,5 +86,7 @@ typedef struct {
     addr_mode mode;
     Instruction_Index inst;
 }OpCode;
+
+void disassemble(FILE* fd);
 
 #endif /* _ROM_H */
