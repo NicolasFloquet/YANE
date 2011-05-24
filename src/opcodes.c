@@ -281,8 +281,8 @@ void disassemble(FILE* fd) {
 	int offset = 0;
 	int i = 0;
 	printf("----- STARTING DISASSEMBLY -----\n");
-	
-	fseek(fd, 0x8050, SEEK_SET);
+	int tmp;
+	fseek(fd, 0x3048+0x10, SEEK_SET);
 	printf("fseeked\n");
 	while(i<32)
 	{
@@ -292,45 +292,52 @@ void disassemble(FILE* fd) {
 		
 		switch(opcode_list[opcode].mode) {
 			case AM_NONE:
+				printf("(none)");
 				break;
 			case AM_REL:
-				printf("$%x", fgetc(fd));
+				printf("$%x\t(relative)", fgetc(fd));
 				offset++;
 				break;
 			case AM_IMM:
-				printf("$%x%x",fgetc(fd), fgetc(fd));
+				tmp = (int)fgetc(fd);
+				tmp = tmp << 8;
+				tmp |= (int)fgetc(fd);
+				printf("$%x\t(immediate)",tmp);
 				offset+=2;
 				break;
 			case AM_ZERO:
-				printf("$%x", fgetc(fd));
+				printf("$%x\t(zero)", fgetc(fd));
 				offset++;
 				break;
 			case AM_ABS:
-				printf("$%x%x",fgetc(fd), fgetc(fd));
+				tmp = (int)fgetc(fd);
+				tmp = tmp << 8;
+				tmp |= (int)fgetc(fd);
+				printf("$%x\t(absolute)",tmp);				
 				offset+=2;
 				break;
 			case AM_ZEROX:
-				printf("$%x", fgetc(fd));
+				printf("$%x\t(zerox)", fgetc(fd));
 				offset++;
 				break;
 			case AM_ZEROY:
-				printf("$%x", fgetc(fd));
+				printf("$%x\t(zeroy)", fgetc(fd));
 				offset++;
 				break;
 			case AM_ABSX:
-				printf("(X)+$%x%x",fgetc(fd), fgetc(fd));
-				offset+=2;
+				printf("(X)+$%x\t(abolute x)", fgetc(fd));
+				offset++;
 				break;
 			case AM_ABSY:
-				printf("(Y)+$%x%x",fgetc(fd), fgetc(fd));
-				offset+=2;
+				printf("(Y)+$%x\t(absolute y)", fgetc(fd));
+				offset++;
 				break;
 			case AM_INDX:
-				printf("($%x)", fgetc(fd));
+				printf("($%x)\t(indirect x)", fgetc(fd));
 				offset++;
 				break;
 			case AM_INDY:
-				printf("($%x)", fgetc(fd));
+				printf("($%x)\t(indirect y)", fgetc(fd));
 				offset++;
 				break;
 			default:

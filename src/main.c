@@ -7,7 +7,7 @@ int main(int argc, char** argv) {
 	FILE* fd = NULL; 
 	ROM_HEADER* header = NULL;
 	
-	fd = fopen("./rom/Zelda1.nes", "r");
+	fd = fopen("./rom/test.nes", "r");
 	
 	if(fd != NULL) {
 		header = load_header(fd);
