@@ -3,6 +3,9 @@
 
 #include <stdio.h>
 
+#define PRG_ROM_SIZE	16384
+#define CHR_ROM_SIZE	8192
+
 typedef unsigned char uchar;
 
 typedef struct {
@@ -24,6 +27,13 @@ typedef struct {
 	
 }ROM_HEADER;
 
+typedef struct {
+	ROM_HEADER* header;
+	unsigned char* prg_rom;
+	unsigned char* chr_rom;
+}NES_ROM;
+
+NES_ROM* load_rom(FILE* fd);
 ROM_HEADER* load_header(FILE* fd);
 void print_header(ROM_HEADER* header);
 

@@ -1,7 +1,8 @@
-#ifndef _ROM_H
-#define _ROM_H
+#ifndef _OPCODES_H
+#define _OPCODES_H
 
 #include <stdio.h>
+#include "../include/rom.h"
 
 typedef enum {
 	AM_NONE,
@@ -87,6 +88,6 @@ typedef struct {
     Instruction_Index inst;
 }OpCode;
 
-void disassemble(FILE* fd);
+void disassemble(NES_ROM* fd);
 
 #endif /* _ROM_H */

@@ -276,74 +276,77 @@ OpCode opcode_list[0x100]={
     {0xff,0,0},/* UNUSED */ 
 };
 
-void disassemble(FILE* fd) {
+void disassemble(NES_ROM* rom) {
 	unsigned char opcode;
-	int offset = 0;
 	int i = 0;
 	printf("----- STARTING DISASSEMBLY -----\n");
 	int tmp;
-	fseek(fd, 0x3048+0x10, SEEK_SET);
-	printf("fseeked\n");
-	while(i<32)
+	while( i < rom->header->prg_pcount*PRG_ROM_SIZE )
 	{
-		opcode = fgetc(fd);
-		printf("0x%x\t%s\t",offset, instruction_list[opcode_list[opcode].inst].name, opcode);
-		offset++;
+		opcode = rom->prg_rom[i];
+		printf("0x%x\t%s\t",i+0x8000, instruction_list[opcode_list[opcode].inst].name, opcode);
 		
 		switch(opcode_list[opcode].mode) {
 			case AM_NONE:
-				printf("(none)");
+				if(opcode_list[opcode].inst == I_UNK)
+					printf("(0x%x)", opcode);
+				else
+					printf("(none)");
+					
+				i+=1;
 				break;
 			case AM_REL:
-				printf("$%x\t(relative)", fgetc(fd));
-				offset++;
+				printf("$%x\t(relative)", rom->prg_rom[i+1]);
+				i+=2;
 				break;
 			case AM_IMM:
-				tmp = (int)fgetc(fd);
-				tmp = tmp << 8;
-				tmp |= (int)fgetc(fd);
-				printf("$%x\t(immediate)",tmp);
-				offset+=2;
+				printf("$%x\t(immediate)", rom->prg_rom[i+1]);
+				i+=2;
 				break;
 			case AM_ZERO:
-				printf("$%x\t(zero)", fgetc(fd));
-				offset++;
+				printf("$%x\t(zero)", rom->prg_rom[i+1]);
+				i+=2;
 				break;
 			case AM_ABS:
-				tmp = (int)fgetc(fd);
+				tmp = (int)rom->prg_rom[i+1];
 				tmp = tmp << 8;
-				tmp |= (int)fgetc(fd);
+				tmp |= (int)rom->prg_rom[i+2];
 				printf("$%x\t(absolute)",tmp);				
-				offset+=2;
+				i+=3;
 				break;
 			case AM_ZEROX:
-				printf("$%x\t(zerox)", fgetc(fd));
-				offset++;
+				printf("$%x\t(zerox)", rom->prg_rom[i+1]);
+				i+=2;
 				break;
 			case AM_ZEROY:
-				printf("$%x\t(zeroy)", fgetc(fd));
-				offset++;
+				printf("$%x\t(zeroy)", rom->prg_rom[i+1]);
+				i+=2;
 				break;
 			case AM_ABSX:
-				printf("(X)+$%x\t(abolute x)", fgetc(fd));
-				offset++;
+				tmp = (int)rom->prg_rom[i+1];
+				tmp = tmp << 8;
+				tmp |= (int)rom->prg_rom[i+2];
+				printf("(X)+$%x\t(abolute x)", tmp);
+				i+=3;
 				break;
-			case AM_ABSY:
-				printf("(Y)+$%x\t(absolute y)", fgetc(fd));
-				offset++;
+			case AM_ABSY:	
+				tmp = (int)rom->prg_rom[i+1];
+				tmp = tmp << 8;
+				tmp |= (int)rom->prg_rom[i+2];
+				printf("(Y)+$%x\t(abolute y)", tmp);
+				i+=3;		
 				break;
 			case AM_INDX:
-				printf("($%x)\t(indirect x)", fgetc(fd));
-				offset++;
+				printf("($%x)\t(indirect x)", rom->prg_rom[i+1]);
+				i+=2;
 				break;
 			case AM_INDY:
-				printf("($%x)\t(indirect y)", fgetc(fd));
-				offset++;
+				printf("($%x)\t(indirect y)", rom->prg_rom[i+1]);
+				i+=2;
 				break;
 			default:
 				printf("Wait... wut? (0x%x)",opcode_list[opcode].mode);
 		}
 		printf("\n");
-		i++;
 	}
 }

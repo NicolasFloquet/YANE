@@ -2,6 +2,24 @@
 
 #include <stdlib.h>
 
+NES_ROM* load_rom(FILE* fd) {
+	int i;
+	NES_ROM* rom = malloc(sizeof(NES_ROM));
+	
+	/* Load ROM header */
+	rom->header = load_header(fd);
+	
+	/* Load PRG ROM */
+	rom->prg_rom = malloc(rom->header->prg_pcount * PRG_ROM_SIZE);
+	fread(rom->prg_rom, 1, rom->header->prg_pcount * PRG_ROM_SIZE, fd);
+	
+	/* Load CHR ROM */
+	rom->chr_rom = malloc(rom->header->chr_pcount * CHR_ROM_SIZE);
+	fread(rom->chr_rom, 1, rom->header->chr_pcount * CHR_ROM_SIZE, fd);
+	
+	return rom;
+}
+
 ROM_HEADER* load_header(FILE* fd) {
 	ROM_HEADER* header = NULL;
 	
