@@ -268,7 +268,8 @@ void jmp(addr_mode mode) {
 void jsr(addr_mode mode) {
 	cpu_state* state = get_current_cpu_state();
 
-	stack_push(state->pc+2);
+	stack_push((state->pc+2) & 0x00FF);
+	stack_push(((state->pc+2) & 0xFF00) >> 8);
 	state->pc = read_memory16(state->pc+1);
 	state->cycle += 6;
 }
@@ -277,6 +278,12 @@ void nop(addr_mode mode) {
 
     state->pc += 1;
     state->cycle += 2;
+}
+void rts(addr_mode mode) {
+	cpu_state* state = get_current_cpu_state();
+
+	state->pc = (stack_pop()<<8)+stack_pop()+1;
+	state->cycle += 6;
 }
 void sec(addr_mode mode) {
     cpu_state* state = get_current_cpu_state();
@@ -359,7 +366,7 @@ Instruction instruction_list[57]={
 	{"INX", NULL},{"INY", NULL},{"JMP", jmp},{"JSR", jsr},{"LDA", lda},
 	{"LDX", ldx},{"LDY", NULL},{"LSR", NULL},{"NOP", nop},{"ORA", NULL},
 	{"PHA", NULL},{"PHP", NULL},{"PLA", NULL},{"PLP", NULL},{"ROL", NULL},
-	{"ROR", NULL},{"RTI", NULL},{"RTS", NULL},{"SBC", NULL},{"SEC", sec},
+	{"ROR", NULL},{"RTI", NULL},{"RTS", rts},{"SBC", NULL},{"SEC", sec},
 	{"SED", NULL},{"SEI", NULL},{"STA", sta},{"STX", stx},{"STY", NULL},
 	{"TAX", NULL},{"TAY", NULL},{"TSX", NULL},{"TXA", NULL},{"TXS", NULL},
 	{"TYA", NULL}
