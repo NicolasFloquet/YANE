@@ -27,12 +27,12 @@ void create_cpu_state() {
 }
 
 void print_cpu_state() {
-	printf("PC=0x%x SP=0x%x A=0x%x X=0x%x Y=0x%x P=0x%x (cycles=%d)\n", current_state->pc,
-							    current_state->sp,
+	printf("A=0x%x X=0x%x Y=0x%x P=0x%x SP=0x%x (cycles=%d)\n", 
 							    current_state->A,
 							    current_state->X,
 							    current_state->Y,
 							    (char)(current_state->P),
+							    current_state->sp,
 							    current_state->cycle);
 }
 
