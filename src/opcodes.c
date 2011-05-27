@@ -7,19 +7,15 @@
 
 #define read_memory16(addr) (((unsigned short int)read_memory(addr+1)<<8) | ((unsigned short int)read_memory(addr)&0xFF))
 
-void jmp(addr_mode mode) {
+void bcs(addr_mode mode) {
 	cpu_state* state = get_current_cpu_state();
 	switch(mode) {
-	    case AM_ABS:    
-		state->pc = read_memory16(state->pc+1);
-		state->cycle += 3;
-		break;
 	    case AM_REL:
-		printf("AM_REL not implemented yet.");
-		state->cycle += 5;
-		break;
+			state->pc += 2+(signed char)read_memory(state->pc+1);
+			state->cycle += 2; /* +1 si on saute dans la meme page, +2 si on saute sur la page suivante */
+			break;
 	    default:
-		printf("invalid addressing mode");
+			printf("invalid addressing mode");
 	}
 }
 void ldx(addr_mode mode) {
@@ -61,6 +57,21 @@ void ldx(addr_mode mode) {
 	    SET_SIGN(state->P);
 	else
 		CLEAR_SIGN(state->P);
+}
+void jmp(addr_mode mode) {
+	cpu_state* state = get_current_cpu_state();
+	switch(mode) {
+	    case AM_ABS:    
+		state->pc = read_memory16(state->pc+1);
+		state->cycle += 3;
+		break;
+	    case AM_REL:
+		printf("AM_REL not implemented yet.");
+		state->cycle += 5;
+		break;
+	    default:
+		printf("invalid addressing mode");
+	}
 }
 void jsr(addr_mode mode) {
 	cpu_state* state = get_current_cpu_state();
@@ -106,7 +117,7 @@ void stx(addr_mode mode) {
 
 Instruction instruction_list[57]={
 	{"UNK", NULL},
-	{"ADC", NULL},{"AND", NULL},{"ASL", NULL},{"BCC", NULL},{"BCS", NULL},
+	{"ADC", NULL},{"AND", NULL},{"ASL", NULL},{"BCC", NULL},{"BCS", bcs},
 	{"BEQ", NULL},{"BIT", NULL},{"BMI", NULL},{"BNE", NULL},{"BPL", NULL},
 	{"BRK", NULL},{"BVC", NULL},{"BVS", NULL},{"CLC", NULL},{"CLD", NULL},
 	{"CLI", NULL},{"CLV", NULL},{"CMP", NULL},{"CPX", NULL},{"CPY", NULL},
