@@ -42,3 +42,9 @@ void step() {
 	exec_instruction(opcode);
 	print_cpu_state();
 }
+
+void runto(unsigned short int addr)
+{
+	while(current_state->pc != addr)
+		step();
+}

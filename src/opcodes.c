@@ -39,6 +39,111 @@ void bcs(addr_mode mode) {
 			printf("invalid addressing mode");
 	}
 }
+void beq(addr_mode mode) {
+	cpu_state* state = get_current_cpu_state();
+	switch(mode) {
+	    case AM_REL:
+			if(GET_ZERO(state->P)) {
+				state->pc += 2+(signed char)read_memory(state->pc+1);
+			}
+			else {
+				state->pc += 2;
+			}
+			state->cycle += 2; /* +1 si on saute dans la meme page, +2 si on saute sur la page suivante */
+			break;
+	    default:
+			printf("invalid addressing mode");
+	}
+}
+void bit(addr_mode mode) {
+	cpu_state* state = get_current_cpu_state();
+	unsigned char data;
+	
+	switch(mode) {
+	    case AM_ZERO:
+			data = read_memory((int)read_memory(state->pc+1));
+
+			state->P &= 0x3f;
+			state->P |= (data & 0xC0); /* D7->SIGN, D6->OVERF */
+
+			if((data & state->A)==0) {
+				SET_ZERO(state->P);
+			}
+			else {
+				CLEAR_ZERO(state->P);
+			}
+			
+			state->pc += 2;
+			state->cycle += 3;
+			break;
+	    default:
+			printf("invalid addressing mode");
+	}
+}
+void bne(addr_mode mode) {
+	cpu_state* state = get_current_cpu_state();
+	switch(mode) {
+	    case AM_REL:
+			if(!GET_ZERO(state->P)) {
+				state->pc += 2+(signed char)read_memory(state->pc+1);
+			}
+			else {
+				state->pc += 2;
+			}
+			state->cycle += 2; /* +1 si on saute dans la meme page, +2 si on saute sur la page suivante */
+			break;
+	    default:
+			printf("invalid addressing mode");
+	}
+}
+void bpl(addr_mode mode) {
+	cpu_state* state = get_current_cpu_state();
+	switch(mode) {
+	    case AM_REL:
+			if(!GET_SIGN(state->P)) {
+				state->pc += 2+(signed char)read_memory(state->pc+1);
+			}
+			else {
+				state->pc += 2;
+			}
+			state->cycle += 2; /* +1 si on saute dans la meme page, +2 si on saute sur la page suivante */
+			break;
+	    default:
+			printf("invalid addressing mode");
+	}
+}
+void bvc(addr_mode mode) {
+	cpu_state* state = get_current_cpu_state();
+	switch(mode) {
+	    case AM_REL:
+			if(!GET_OVERF(state->P)) {
+				state->pc += 2+(signed char)read_memory(state->pc+1);
+			}
+			else {
+				state->pc += 2;
+			}
+			state->cycle += 2; /* +1 si on saute dans la meme page, +2 si on saute sur la page suivante */
+			break;
+	    default:
+			printf("invalid addressing mode");
+	}
+}
+void bvs(addr_mode mode) {
+	cpu_state* state = get_current_cpu_state();
+	switch(mode) {
+	    case AM_REL:
+			if(GET_OVERF(state->P)) {
+				state->pc += 2+(signed char)read_memory(state->pc+1);
+			}
+			else {
+				state->pc += 2;
+			}
+			state->cycle += 2; /* +1 si on saute dans la meme page, +2 si on saute sur la page suivante */
+			break;
+	    default:
+			printf("invalid addressing mode");
+	}
+}
 void clc(addr_mode mode) {
     cpu_state* state = get_current_cpu_state();
 
@@ -93,12 +198,12 @@ void lda(addr_mode mode) {
 		printf("invalid addressing mode");
 	}
 
-	if(state->X==0)
+	if(state->A==0)
 		SET_ZERO(state->P);
 	else
 		CLEAR_ZERO(state->P);
 		
-	if(state->X<0)
+	if(state->A & 0x80)
 	    SET_SIGN(state->P);
 	else
 		CLEAR_SIGN(state->P);
@@ -180,6 +285,48 @@ void sec(addr_mode mode) {
     state->pc += 1;
     state->cycle += 2;
 }
+void sta(addr_mode mode) {
+	cpu_state* state = get_current_cpu_state();
+	switch(mode) {
+	    case AM_ZERO:    
+			write_memory((int)read_memory(state->pc+1), state->A);
+			state->pc += 2;
+			state->cycle += 3;
+			break;
+	    case AM_ZEROX:
+			write_memory(((int)read_memory(state->pc+1) + state->X)%0x100, state->A);
+			state->pc += 2;
+			state->cycle += 4;
+			break;
+		case AM_ABS:
+			write_memory( read_memory16(state->pc+1), state->A);
+			state->pc += 3;
+			state->cycle += 4;
+			break;
+	    case AM_ABSX:
+			write_memory( read_memory16(state->pc+1) + state->X, state->A);
+			state->pc += 3;
+			state->cycle += 5;
+			break;
+		case AM_ABSY:
+			write_memory( read_memory16(state->pc+1) + state->Y, state->A);
+			state->pc += 3;
+			state->cycle += 5;
+			break;
+		case AM_INDX:
+			write_memory(read_memory16((read_memory(state->pc+1)+state->X)), state->A);
+			state->pc += 2;
+			state->cycle += 6;
+			break;
+		case AM_INDY:
+			write_memory(read_memory16(read_memory(state->pc+1))+state->Y, state->A);
+			state->pc += 2;
+			state->cycle += 6;
+			break;
+	    default:
+			printf("invalid addressing mode");
+	}
+}
 void stx(addr_mode mode) {
     cpu_state* state = get_current_cpu_state();
     switch(mode) {
@@ -205,15 +352,15 @@ void stx(addr_mode mode) {
 Instruction instruction_list[57]={
 	{"UNK", NULL},
 	{"ADC", NULL},{"AND", NULL},{"ASL", NULL},{"BCC", bcc},{"BCS", bcs},
-	{"BEQ", NULL},{"BIT", NULL},{"BMI", NULL},{"BNE", NULL},{"BPL", NULL},
-	{"BRK", NULL},{"BVC", NULL},{"BVS", NULL},{"CLC", clc},{"CLD", NULL},
+	{"BEQ", beq},{"BIT", bit},{"BMI", NULL},{"BNE", bne},{"BPL", bpl},
+	{"BRK", NULL},{"BVC", bvc},{"BVS", bvs},{"CLC", clc},{"CLD", NULL},
 	{"CLI", NULL},{"CLV", NULL},{"CMP", NULL},{"CPX", NULL},{"CPY", NULL},
 	{"DEC", NULL},{"DEX", NULL},{"DEY", NULL},{"EOR", NULL},{"INC", NULL},
 	{"INX", NULL},{"INY", NULL},{"JMP", jmp},{"JSR", jsr},{"LDA", lda},
 	{"LDX", ldx},{"LDY", NULL},{"LSR", NULL},{"NOP", nop},{"ORA", NULL},
 	{"PHA", NULL},{"PHP", NULL},{"PLA", NULL},{"PLP", NULL},{"ROL", NULL},
 	{"ROR", NULL},{"RTI", NULL},{"RTS", NULL},{"SBC", NULL},{"SEC", sec},
-	{"SED", NULL},{"SEI", NULL},{"STA", NULL},{"STX", stx},{"STY", NULL},
+	{"SED", NULL},{"SEI", NULL},{"STA", sta},{"STX", stx},{"STY", NULL},
 	{"TAX", NULL},{"TAY", NULL},{"TSX", NULL},{"TXA", NULL},{"TXS", NULL},
 	{"TYA", NULL}
 
