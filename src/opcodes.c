@@ -7,16 +7,44 @@
 
 #define read_memory16(addr) (((unsigned short int)read_memory(addr+1)<<8) | ((unsigned short int)read_memory(addr)&0xFF))
 
-void bcs(addr_mode mode) {
+void bcc(addr_mode mode) {
 	cpu_state* state = get_current_cpu_state();
 	switch(mode) {
 	    case AM_REL:
-			state->pc += 2+(signed char)read_memory(state->pc+1);
+			if(!GET_CARRY(state->P)) {
+				state->pc += 2+(signed char)read_memory(state->pc+1);
+			}
+			else {
+				state->pc += 2;
+			}
 			state->cycle += 2; /* +1 si on saute dans la meme page, +2 si on saute sur la page suivante */
 			break;
 	    default:
 			printf("invalid addressing mode");
 	}
+}
+void bcs(addr_mode mode) {
+	cpu_state* state = get_current_cpu_state();
+	switch(mode) {
+	    case AM_REL:
+			if(GET_CARRY(state->P)) {
+				state->pc += 2+(signed char)read_memory(state->pc+1);
+			}
+			else {
+				state->pc += 2;
+			}
+			state->cycle += 2; /* +1 si on saute dans la meme page, +2 si on saute sur la page suivante */
+			break;
+	    default:
+			printf("invalid addressing mode");
+	}
+}
+void clc(addr_mode mode) {
+    cpu_state* state = get_current_cpu_state();
+
+    CLEAR_CARRY(state->P);
+    state->pc += 1;
+    state->cycle += 2;
 }
 void ldx(addr_mode mode) {
 	cpu_state* state = get_current_cpu_state();
@@ -117,9 +145,9 @@ void stx(addr_mode mode) {
 
 Instruction instruction_list[57]={
 	{"UNK", NULL},
-	{"ADC", NULL},{"AND", NULL},{"ASL", NULL},{"BCC", NULL},{"BCS", bcs},
+	{"ADC", NULL},{"AND", NULL},{"ASL", NULL},{"BCC", bcc},{"BCS", bcs},
 	{"BEQ", NULL},{"BIT", NULL},{"BMI", NULL},{"BNE", NULL},{"BPL", NULL},
-	{"BRK", NULL},{"BVC", NULL},{"BVS", NULL},{"CLC", NULL},{"CLD", NULL},
+	{"BRK", NULL},{"BVC", NULL},{"BVS", NULL},{"CLC", clc},{"CLD", NULL},
 	{"CLI", NULL},{"CLV", NULL},{"CMP", NULL},{"CPX", NULL},{"CPY", NULL},
 	{"DEC", NULL},{"DEX", NULL},{"DEY", NULL},{"EOR", NULL},{"INC", NULL},
 	{"INX", NULL},{"INY", NULL},{"JMP", jmp},{"JSR", jsr},{"LDA", NULL},
