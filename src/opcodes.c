@@ -46,32 +46,91 @@ void clc(addr_mode mode) {
     state->pc += 1;
     state->cycle += 2;
 }
+void lda(addr_mode mode) {
+	cpu_state* state = get_current_cpu_state();
+	switch(mode) {
+	    case AM_IMM:    
+			state->A = read_memory(state->pc+1);
+			state->pc += 2;
+			state->cycle += 2;
+			break;
+	    case AM_ZERO:    
+			state->A = read_memory((int)read_memory(state->pc+1));
+			state->pc += 2;
+			state->cycle += 3;
+			break;
+	    case AM_ZEROX:    
+			state->A = read_memory(((int)read_memory(state->pc+1) + state->X)%0x100);
+			state->pc += 2;
+			state->cycle += 4;
+			break;
+		case AM_ABS:
+			state->A = read_memory( read_memory16(state->pc+1) );
+			state->pc += 3;
+			state->cycle += 4;
+			break;
+	    case AM_ABSX:
+			state->A = read_memory( read_memory16(state->pc+1) + state->X );
+			state->pc += 3;
+			state->cycle += 4; /* *** "Add 1 when page boundary is crossed." *** */
+			break;
+		case AM_ABSY:
+			state->A = read_memory( read_memory16(state->pc+1) + state->Y );
+			state->pc += 3;
+			state->cycle += 4; /* *** "Add 1 when page boundary is crossed." *** */
+			break;
+		case AM_INDX:
+			state->A = read_memory(read_memory16((read_memory(state->pc+1)+state->X)));
+			state->pc += 2;
+			state->cycle += 6;
+			break;
+		case AM_INDY:
+			state->A = read_memory(read_memory16(read_memory(state->pc+1))+state->Y);
+			state->pc += 2;
+			state->cycle += 5; /* *** "Add 1 when page boundary is crossed." *** */
+			break;
+	    default:
+		printf("invalid addressing mode");
+	}
+
+	if(state->X==0)
+		SET_ZERO(state->P);
+	else
+		CLEAR_ZERO(state->P);
+		
+	if(state->X<0)
+	    SET_SIGN(state->P);
+	else
+		CLEAR_SIGN(state->P);
+}
 void ldx(addr_mode mode) {
 	cpu_state* state = get_current_cpu_state();
 	switch(mode) {
 	    case AM_IMM:    
-		state->X = read_memory(state->pc+1);
-		state->pc += 2;
-		state->cycle += 2;
-		break;
+			state->X = read_memory(state->pc+1);
+			state->pc += 2;
+			state->cycle += 2;
+			break;
 	    case AM_ZERO:    
-		state->X = read_memory((int)read_memory(state->pc+1));
-		state->pc += 2;
-		state->cycle += 3;
-		break;
+			state->X = read_memory((int)read_memory(state->pc+1));
+			state->pc += 2;
+			state->cycle += 3;
+			break;
 	    case AM_ZEROY:    
-		state->X = read_memory(((int)read_memory(state->pc+1) + state->Y)%0x100);
-		state->pc += 2;
-		state->cycle += 4;
-		break;
-	    case AM_ABS:
-		state->X = read_memory( read_memory16(state->pc+1) );
-		state->pc += 3;
-		state->cycle += 4;
+			state->X = read_memory(((int)read_memory(state->pc+1) + state->Y)%0x100);
+			state->pc += 2;
+			state->cycle += 4;
+			break;
+		case AM_ABS:
+			state->X = read_memory( read_memory16(state->pc+1) );
+			state->pc += 3;
+			state->cycle += 4;
+			break;
 	    case AM_ABSY:
-		state->X = read_memory( read_memory16(state->pc+1) + state->Y );
-		state->pc += 3;
-		state->cycle += 4; /* *** "Add 1 when page boundary is crossed." *** */
+			state->X = read_memory( read_memory16(state->pc+1) + state->Y );
+			state->pc += 3;
+			state->cycle += 4; /* *** "Add 1 when page boundary is crossed." *** */
+			break;
 	    default:
 		printf("invalid addressing mode");
 	}
@@ -150,7 +209,7 @@ Instruction instruction_list[57]={
 	{"BRK", NULL},{"BVC", NULL},{"BVS", NULL},{"CLC", clc},{"CLD", NULL},
 	{"CLI", NULL},{"CLV", NULL},{"CMP", NULL},{"CPX", NULL},{"CPY", NULL},
 	{"DEC", NULL},{"DEX", NULL},{"DEY", NULL},{"EOR", NULL},{"INC", NULL},
-	{"INX", NULL},{"INY", NULL},{"JMP", jmp},{"JSR", jsr},{"LDA", NULL},
+	{"INX", NULL},{"INY", NULL},{"JMP", jmp},{"JSR", jsr},{"LDA", lda},
 	{"LDX", ldx},{"LDY", NULL},{"LSR", NULL},{"NOP", nop},{"ORA", NULL},
 	{"PHA", NULL},{"PHP", NULL},{"PLA", NULL},{"PLP", NULL},{"ROL", NULL},
 	{"ROR", NULL},{"RTI", NULL},{"RTS", NULL},{"SBC", NULL},{"SEC", sec},
