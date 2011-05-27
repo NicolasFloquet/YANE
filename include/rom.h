@@ -33,8 +33,14 @@ typedef struct {
 	unsigned char* chr_rom;
 }NES_ROM;
 
-NES_ROM* load_rom(FILE* fd);
+void load_rom(FILE* fd);
+NES_ROM* get_current_rom();
 ROM_HEADER* load_header(FILE* fd);
+
+unsigned char prg_read(unsigned short int addr);
+
+
+/* Debug functions */
 void print_header(ROM_HEADER* header);
 
 #endif /* _ROM_H */
