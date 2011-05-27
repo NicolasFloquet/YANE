@@ -22,7 +22,6 @@ void jmp(addr_mode mode) {
 		printf("invalid addressing mode");
 	}
 }
-
 void ldx(addr_mode mode) {
 	cpu_state* state = get_current_cpu_state();
 	switch(mode) {
@@ -54,11 +53,15 @@ void ldx(addr_mode mode) {
 	}
 
 	if(state->X==0)
-	    state->P.flags.z = 1;
+		SET_ZERO(state->P);
+	else
+		CLEAR_ZERO(state->P);
+		
 	if(state->X<0)
-	    state->P.flags.n = 1;
+	    SET_SIGN(state->P);
+	else
+		CLEAR_SIGN(state->P);
 }
-
 void jsr(addr_mode mode) {
 	cpu_state* state = get_current_cpu_state();
 
@@ -66,18 +69,16 @@ void jsr(addr_mode mode) {
 	state->pc = read_memory16(state->pc+1);
 	state->cycle += 6;
 }
-
 void nop(addr_mode mode) {
     cpu_state* state = get_current_cpu_state();
 
     state->pc += 1;
     state->cycle += 2;
 }
-
 void sec(addr_mode mode) {
     cpu_state* state = get_current_cpu_state();
 
-    state->P.flags.c=1;
+    SET_CARRY(state->P);
     state->pc += 1;
     state->cycle += 2;
 }

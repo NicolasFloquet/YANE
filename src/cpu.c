@@ -19,14 +19,7 @@ void create_cpu_state() {
 	state->X = 0;
 	state->Y = 0;
 
-	state->P.flags.n = 0;
-	state->P.flags.v = 0;
-	state->P.flags.unused = 0;
-	state->P.flags.b = 0;
-	state->P.flags.d = 0;
-	state->P.flags.i = 0;
-	state->P.flags.z = 0;
-	state->P.flags.c = 0;
+	state->P = 0x24; /* Le 5ième bit n'es pas utilisé et toujours set à 1, et interruptions désactivées au début */
 
 	state->cycle = 0;
 	
@@ -39,7 +32,7 @@ void print_cpu_state() {
 							    current_state->A,
 							    current_state->X,
 							    current_state->Y,
-							    (char)(current_state->P.byte),
+							    (char)(current_state->P),
 							    current_state->cycle);
 }
 
