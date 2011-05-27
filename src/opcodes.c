@@ -151,6 +151,20 @@ void clc(addr_mode mode) {
     state->pc += 1;
     state->cycle += 2;
 }
+void cld(addr_mode mode) {
+    cpu_state* state = get_current_cpu_state();
+
+    CLEAR_BCD(state->P);
+    state->pc += 1;
+    state->cycle += 2;
+}
+void cli(addr_mode mode) {
+    cpu_state* state = get_current_cpu_state();
+
+    CLEAR_INTERRUPT(state->P);
+    state->pc += 1;
+    state->cycle += 2;
+}
 void lda(addr_mode mode) {
 	cpu_state* state = get_current_cpu_state();
 	switch(mode) {
@@ -273,6 +287,20 @@ void jsr(addr_mode mode) {
 	state->pc = read_memory16(state->pc+1);
 	state->cycle += 6;
 }
+void php(addr_mode mode) {
+	cpu_state* state = get_current_cpu_state();
+
+	stack_push(state->P);
+	state->pc += 1;
+	state->cycle += 3;
+}
+void pla(addr_mode mode) {
+	cpu_state* state = get_current_cpu_state();
+
+	state->A = stack_pop();
+	state->pc += 1;
+	state->cycle += 4;
+}
 void nop(addr_mode mode) {
     cpu_state* state = get_current_cpu_state();
 
@@ -289,6 +317,20 @@ void sec(addr_mode mode) {
     cpu_state* state = get_current_cpu_state();
 
     SET_CARRY(state->P);
+    state->pc += 1;
+    state->cycle += 2;
+}
+void sed(addr_mode mode) {
+    cpu_state* state = get_current_cpu_state();
+
+    SET_BCD(state->P);
+    state->pc += 1;
+    state->cycle += 2;
+}
+void sei(addr_mode mode) {
+    cpu_state* state = get_current_cpu_state();
+
+    SET_INTERRUPT(state->P);
     state->pc += 1;
     state->cycle += 2;
 }
@@ -360,14 +402,14 @@ Instruction instruction_list[57]={
 	{"UNK", NULL},
 	{"ADC", NULL},{"AND", NULL},{"ASL", NULL},{"BCC", bcc},{"BCS", bcs},
 	{"BEQ", beq},{"BIT", bit},{"BMI", NULL},{"BNE", bne},{"BPL", bpl},
-	{"BRK", NULL},{"BVC", bvc},{"BVS", bvs},{"CLC", clc},{"CLD", NULL},
-	{"CLI", NULL},{"CLV", NULL},{"CMP", NULL},{"CPX", NULL},{"CPY", NULL},
+	{"BRK", NULL},{"BVC", bvc},{"BVS", bvs},{"CLC", clc},{"CLD", cld},
+	{"CLI", cli},{"CLV", NULL},{"CMP", NULL},{"CPX", NULL},{"CPY", NULL},
 	{"DEC", NULL},{"DEX", NULL},{"DEY", NULL},{"EOR", NULL},{"INC", NULL},
 	{"INX", NULL},{"INY", NULL},{"JMP", jmp},{"JSR", jsr},{"LDA", lda},
 	{"LDX", ldx},{"LDY", NULL},{"LSR", NULL},{"NOP", nop},{"ORA", NULL},
-	{"PHA", NULL},{"PHP", NULL},{"PLA", NULL},{"PLP", NULL},{"ROL", NULL},
+	{"PHA", NULL},{"PHP", php},{"PLA", pla},{"PLP", NULL},{"ROL", NULL},
 	{"ROR", NULL},{"RTI", NULL},{"RTS", rts},{"SBC", NULL},{"SEC", sec},
-	{"SED", NULL},{"SEI", NULL},{"STA", sta},{"STX", stx},{"STY", NULL},
+	{"SED", sed},{"SEI", sei},{"STA", sta},{"STX", stx},{"STY", NULL},
 	{"TAX", NULL},{"TAY", NULL},{"TSX", NULL},{"TXA", NULL},{"TXS", NULL},
 	{"TYA", NULL}
 
