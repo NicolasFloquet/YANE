@@ -27,7 +27,7 @@ void create_cpu_state() {
 }
 
 void print_cpu_state() {
-	printf("A=0x%x X=0x%x Y=0x%x P=0x%x\n", 
+	printf("A=0x%x X=0x%x Y=0x%x P=0x%x", 
 							    current_state->A,
 							    current_state->X,
 							    current_state->Y,
@@ -43,6 +43,8 @@ void step() {
 
 void runto(unsigned short int addr)
 {
-	while(current_state->pc != addr)
+	while(current_state->pc != addr) {
 		step();
+		printf("\n");
+	}
 }

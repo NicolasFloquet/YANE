@@ -64,7 +64,7 @@ void adc(addr_mode mode) {
 		CLEAR_ZERO(state->P);
 		
 	/* Addition en décimal */
-	if(GET_BCD(state->P)) {
+	if(0 && GET_BCD(state->P)) {
 		if(((state->A & 0xf) + (src & 0xf) + GET_CARRY(state->P)) > 9)
 			tmp += 6;
 		
@@ -346,6 +346,7 @@ void clv(addr_mode mode) {
 void cmp(addr_mode mode) {
 	cpu_state* state = get_current_cpu_state();
 	signed char data;
+	unsigned int tmp = 0;
 	
 	switch(mode) {
 	    case AM_IMM:    
@@ -391,8 +392,13 @@ void cmp(addr_mode mode) {
 	    default:
 			printf("invalid addressing mode");
 	}
-	
+
+	tmp = (unsigned char)state->A + ((~(unsigned int)data)&0xff) + 1;
 	data = (signed char)state->A - (signed char)data;
+	if(tmp > 0xff)
+		SET_CARRY(state->P);
+	else
+		CLEAR_CARRY(state->P);
 	
 	if(data == 0)
 		SET_ZERO(state->P);
@@ -401,11 +407,9 @@ void cmp(addr_mode mode) {
 		
 	if(data & 0x80) {
 	    SET_SIGN(state->P);
-	    CLEAR_CARRY(state->P);
 	}
 	else {
 		CLEAR_SIGN(state->P);
-		SET_CARRY(state->P);
 	}	
 }
 void eor(addr_mode mode) {
