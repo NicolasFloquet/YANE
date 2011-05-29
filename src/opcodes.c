@@ -310,6 +310,64 @@ void cmp(addr_mode mode) {
 		SET_CARRY(state->P);
 	}	
 }
+void eor(addr_mode mode) {
+	cpu_state* state = get_current_cpu_state();
+	
+	switch(mode) {
+	    case AM_IMM:    
+			state->A = state->A ^ read_memory(state->pc+1);
+			state->pc += 2;
+			state->cycle += 2;
+			break;
+	    case AM_ZERO:    
+			state->A = state->A ^ read_memory((int)read_memory(state->pc+1));
+			state->pc += 2;
+			state->cycle += 3;
+			break;
+	    case AM_ZEROX:    
+			state->A = state->A ^ read_memory(((int)read_memory(state->pc+1) + state->X)%0x100);
+			state->pc += 2;
+			state->cycle += 4;
+			break;
+		case AM_ABS:
+			state->A = state->A ^ read_memory( read_memory16(state->pc+1) );
+			state->pc += 3;
+			state->cycle += 4;
+			break;
+	    case AM_ABSX:
+			state->A = state->A ^ read_memory( read_memory16(state->pc+1) + state->X );
+			state->pc += 3;
+			state->cycle += 4; /* *** "Add 1 when page boundary is crossed." *** */
+			break;
+		case AM_ABSY:
+			state->A = state->A ^ read_memory( read_memory16(state->pc+1) + state->Y );
+			state->pc += 3;
+			state->cycle += 4; /* *** "Add 1 when page boundary is crossed." *** */
+			break;
+		case AM_INDX:
+			state->A = state->A ^ read_memory(read_memory16((read_memory(state->pc+1)+state->X)));
+			state->pc += 2;
+			state->cycle += 6;
+			break;
+		case AM_INDY:
+			state->A = state->A ^ read_memory(read_memory16(read_memory(state->pc+1))+state->Y);
+			state->pc += 2;
+			state->cycle += 5;
+			break;
+	    default:
+			printf("invalid addressing mode");
+	}
+
+	if(state->A==0)
+		SET_ZERO(state->P);
+	else
+		CLEAR_ZERO(state->P);
+		
+	if(state->A & 0x80)
+	    SET_SIGN(state->P);
+	else
+		CLEAR_SIGN(state->P);
+}
 void lda(addr_mode mode) {
 	cpu_state* state = get_current_cpu_state();
 	switch(mode) {
@@ -634,7 +692,7 @@ Instruction instruction_list[57]={
 	{"BEQ", beq},{"BIT", bit},{"BMI", bmi},{"BNE", bne},{"BPL", bpl},
 	{"BRK", NULL},{"BVC", bvc},{"BVS", bvs},{"CLC", clc},{"CLD", cld},
 	{"CLI", cli},{"CLV", clv},{"CMP", cmp},{"CPX", NULL},{"CPY", NULL},
-	{"DEC", NULL},{"DEX", NULL},{"DEY", NULL},{"EOR", NULL},{"INC", NULL},
+	{"DEC", NULL},{"DEX", NULL},{"DEY", NULL},{"EOR", eor},{"INC", NULL},
 	{"INX", NULL},{"INY", NULL},{"JMP", jmp},{"JSR", jsr},{"LDA", lda},
 	{"LDX", ldx},{"LDY", NULL},{"LSR", NULL},{"NOP", nop},{"ORA", ora},
 	{"PHA", pha},{"PHP", php},{"PLA", pla},{"PLP", plp},{"ROL", NULL},
