@@ -238,6 +238,13 @@ void cli(addr_mode mode) {
     state->pc += 1;
     state->cycle += 2;
 }
+void clv(addr_mode mode) {
+    cpu_state* state = get_current_cpu_state();
+
+    CLEAR_OVERF(state->P);
+    state->pc += 1;
+    state->cycle += 2;
+}
 void cmp(addr_mode mode) {
 	cpu_state* state = get_current_cpu_state();
 	signed char data;
@@ -626,7 +633,7 @@ Instruction instruction_list[57]={
 	{"ADC", NULL},{"AND", and},{"ASL", NULL},{"BCC", bcc},{"BCS", bcs},
 	{"BEQ", beq},{"BIT", bit},{"BMI", bmi},{"BNE", bne},{"BPL", bpl},
 	{"BRK", NULL},{"BVC", bvc},{"BVS", bvs},{"CLC", clc},{"CLD", cld},
-	{"CLI", cli},{"CLV", NULL},{"CMP", cmp},{"CPX", NULL},{"CPY", NULL},
+	{"CLI", cli},{"CLV", clv},{"CMP", cmp},{"CPX", NULL},{"CPY", NULL},
 	{"DEC", NULL},{"DEX", NULL},{"DEY", NULL},{"EOR", NULL},{"INC", NULL},
 	{"INX", NULL},{"INY", NULL},{"JMP", jmp},{"JSR", jsr},{"LDA", lda},
 	{"LDX", ldx},{"LDY", NULL},{"LSR", NULL},{"NOP", nop},{"ORA", ora},
