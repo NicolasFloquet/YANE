@@ -7,6 +7,104 @@
 
 #define read_memory16(addr) (((unsigned short int)read_memory(addr+1)<<8) | ((unsigned short int)read_memory(addr)&0xFF))
 
+void adc(addr_mode mode) {
+	cpu_state* state = get_current_cpu_state();
+	unsigned char src;
+	unsigned int tmp;
+	switch(mode) {
+	    case AM_IMM:    
+			src = read_memory(state->pc+1);
+			state->pc += 2;
+			state->cycle += 2;
+			break;
+	    case AM_ZERO:    
+			src = read_memory((int)read_memory(state->pc+1));
+			state->pc += 2;
+			state->cycle += 3;
+			break;
+	    case AM_ZEROX:    
+			src = read_memory(((int)read_memory(state->pc+1) + state->X)%0x100);
+			state->pc += 2;
+			state->cycle += 4;
+			break;
+		case AM_ABS:
+			src = read_memory( read_memory16(state->pc+1) );
+			state->pc += 3;
+			state->cycle += 4;
+			break;
+	    case AM_ABSX:
+			src = read_memory( read_memory16(state->pc+1) + state->X );
+			state->pc += 3;
+			state->cycle += 4; /* *** "Add 1 when page boundary is crossed." *** */
+			break;
+		case AM_ABSY:
+			src = read_memory( read_memory16(state->pc+1) + state->Y );
+			state->pc += 3;
+			state->cycle += 4; /* *** "Add 1 when page boundary is crossed." *** */
+			break;
+		case AM_INDX:
+			src = read_memory(read_memory16((read_memory(state->pc+1)+state->X)));
+			state->pc += 2;
+			state->cycle += 6;
+			break;
+		case AM_INDY:
+			src = read_memory(read_memory16(read_memory(state->pc+1))+state->Y);
+			state->pc += 2;
+			state->cycle += 5;
+			break;
+	    default:
+		printf("invalid addressing mode");
+	}
+	
+	tmp = src + state->A + GET_CARRY(state->P);
+	
+	if( (tmp & 0xff) ==0)
+		SET_ZERO(state->P);
+	else
+		CLEAR_ZERO(state->P);
+		
+	/* Addition en décimal */
+	if(GET_BCD(state->P)) {
+		if(((state->A & 0xf) + (src & 0xf) + GET_CARRY(state->P)) > 9)
+			tmp += 6;
+		
+		if(tmp < 0)
+			SET_SIGN(state->P);
+		else
+			CLEAR_SIGN(state->P);
+			
+		if(!((state->A ^ src) & 0x80) && ((state->A ^ tmp) & 0x80))
+			SET_OVERF(state->P);
+		else
+			CLEAR_OVERF(state->P);
+			
+		if(tmp > 0x99)
+			tmp += 96;
+		
+		if(tmp > 0x99)
+			SET_CARRY(state->P);
+		else
+			CLEAR_CARRY(state->P);
+	}
+	else { /* Addition classique */
+		if(tmp & 0x80)
+			SET_SIGN(state->P);
+		else
+			CLEAR_SIGN(state->P);
+			
+		if(!((state->A ^ src) & 0x80) && ((state->A ^ tmp) & 0x80))
+			SET_OVERF(state->P);
+		else
+			CLEAR_OVERF(state->P);
+			
+		if(tmp > 0xff)
+			SET_CARRY(state->P);
+		else
+			CLEAR_CARRY(state->P);		
+		
+	}
+	state->A = tmp;
+}
 void and(addr_mode mode) {
 	cpu_state* state = get_current_cpu_state();
 	switch(mode) {
@@ -688,7 +786,7 @@ void stx(addr_mode mode) {
 
 Instruction instruction_list[57]={
 	{"UNK", NULL},
-	{"ADC", NULL},{"AND", and},{"ASL", NULL},{"BCC", bcc},{"BCS", bcs},
+	{"ADC", adc},{"AND", and},{"ASL", NULL},{"BCC", bcc},{"BCS", bcs},
 	{"BEQ", beq},{"BIT", bit},{"BMI", bmi},{"BNE", bne},{"BPL", bpl},
 	{"BRK", NULL},{"BVC", bvc},{"BVS", bvs},{"CLC", clc},{"CLD", cld},
 	{"CLI", cli},{"CLV", clv},{"CMP", cmp},{"CPX", NULL},{"CPY", NULL},
