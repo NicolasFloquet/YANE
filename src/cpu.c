@@ -14,7 +14,7 @@ void create_cpu_state() {
 	cpu_state* state = malloc(sizeof(cpu_state));
 	
 	state->pc = 0xC000; /* à voir */
-	state->sp = 0xFF;
+	state->sp = 0xFD;
 	state->A = 0;
 	state->X = 0;
 	state->Y = 0;
@@ -37,9 +37,8 @@ void print_cpu_state() {
 
 void step() {
 	unsigned char opcode = read_memory(current_state->pc);
-	printf("0x%x\t",current_state->pc);
+	print_instruction();
 	exec_instruction(opcode);
-	print_cpu_state();
 }
 
 void runto(unsigned short int addr)

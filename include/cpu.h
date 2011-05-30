@@ -46,6 +46,7 @@ typedef struct {
 
 cpu_state* get_current_cpu_state();
 void create_cpu_state();
+void print_cpu_state();
 void step();
 void runto(unsigned short int addr);
 #endif /* _CPU_H */

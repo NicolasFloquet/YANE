@@ -95,14 +95,14 @@ void write_memory(unsigned short int addr, unsigned char data) {
 /* Un peu trop hardcodé à mon gout */
 void stack_push(unsigned char data) {
     cpu_state* state = get_current_cpu_state();
-    state->sp--;
     write_memory(state->sp + 0x0100, data);
+    state->sp--;
 
 }
 
 unsigned char stack_pop() {
     cpu_state* state = get_current_cpu_state();
     state->sp++;
-    return read_memory(state->sp-1 + 0x0100);
+    return read_memory(state->sp + 0x0100);
 
 }

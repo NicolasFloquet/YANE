@@ -93,6 +93,8 @@ typedef struct {
 
 addr_mode get_addr_mode(unsigned char opcode);
 void exec_instruction(unsigned char opcode);
+
+void print_instruction();
 void disassemble();
 
 #endif /* _ROM_H */

@@ -1475,13 +1475,57 @@ addr_mode get_addr_mode(unsigned char opcode) {
 
 void exec_instruction(unsigned char opcode) {
     if(instruction_list[opcode_list[opcode].inst].handler == NULL) {
-	printf("%s not implemented.\t", instruction_list[opcode_list[opcode].inst].name);
+		printf("%s not implemented.\t", instruction_list[opcode_list[opcode].inst].name);
     }
     else {
-	printf("%s\t",instruction_list[opcode_list[opcode].inst].name);
-	instruction_list[opcode_list[opcode].inst].handler(opcode_list[opcode].mode); 
+		instruction_list[opcode_list[opcode].inst].handler(opcode_list[opcode].mode); 
     }
 	
+}
+
+void print_instruction() {
+	cpu_state* state = get_current_cpu_state();
+	unsigned char opcode = read_memory(state->pc);
+	printf("%X\t%s ", state->pc, instruction_list[opcode_list[opcode].inst].name);
+	
+	switch(opcode_list[opcode].mode) {
+			case AM_NONE:	
+				printf("\t\t");
+				break;
+			case AM_REL:
+				printf("$%X\t\t", read_memory(state->pc + 1) & 0xff);
+				break;
+			case AM_IMM:
+				printf("#$%X \t", read_memory(state->pc + 1) & 0xff);
+				break;
+			case AM_ZERO:
+				printf("$%X\t\t", read_memory(state->pc + 1) & 0xff);
+				break;
+			case AM_ABS:
+				printf("$%X\t", read_memory16(state->pc + 1) & 0xffff);				
+				break;
+			case AM_ZEROX:
+				printf("$%X, X\t", read_memory(state->pc + 1) & 0xff);
+				break;
+			case AM_ZEROY:
+				printf("$%X, Y\t", read_memory(state->pc + 1) & 0xff);
+				break;
+			case AM_ABSX:
+				printf("$%X, X\t", read_memory16(state->pc + 1) & 0xffff);
+				break;
+			case AM_ABSY:	
+				printf("$%X, Y\t", read_memory16(state->pc + 1) & 0xffff);	
+				break;
+			case AM_INDX:
+				printf("($%X, X)\t", read_memory16(state->pc + 1) & 0xffff);
+				break;
+			case AM_INDY:
+				printf("($%X), Y\t", read_memory16(state->pc + 1) & 0xffff);	
+				break;
+			default:
+				printf("Wait... wut? (0x%x)",opcode_list[opcode].mode);
+		}
+		print_cpu_state();
 }
 
 void disassemble() {
