@@ -18,7 +18,6 @@ static void ram_write(unsigned short int addr, unsigned char data) {
 static const memory_zone memory_map[] = {
     {0x0000, 0x00ff, "zero page", ram_read, ram_write},
     {0x0100, 0x01ff, "stack", ram_read, ram_write},
-    {0x0000, 0x00ff, "zero page", ram_read, ram_write},
     {0x0200, 0x07ff, "RAM", ram_read, ram_write},
     {0x0800, 0x1fff, "RAM mirror", ram_read, ram_write},
     {0x2000, 0x2007, "IO regs1", NULL, NULL},
@@ -33,6 +32,30 @@ static const memory_zone memory_map[] = {
 
 void init_ram() {
     RAM = malloc(0x800);
+}
+
+void dump_zero() {
+    FILE* fd = fopen("zero.dump", "w");
+    fwrite(RAM, 0xff, 1, fd);
+    fclose(fd);
+}
+
+void dump_stack() {
+    FILE* fd = fopen("stack.dump", "w");
+    fwrite(&(RAM[0x100]), 0xff, 1, fd);
+    fclose(fd);
+}
+
+void dump_ram() {
+    FILE* fd = fopen("ram.dump", "w");
+    fwrite(&(RAM[0x200]), 0x5ff, 1, fd);
+    fclose(fd);
+}
+
+void dump_all() {
+    FILE* fd = fopen("all.dump", "w");
+    fwrite((RAM), 0x7ff, 1, fd);
+    fclose(fd);
 }
 
 static int find_zone(unsigned short int addr) {

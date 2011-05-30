@@ -27,11 +27,12 @@ void create_cpu_state() {
 }
 
 void print_cpu_state() {
-	printf("A=0x%x X=0x%x Y=0x%x P=0x%x", 
+	printf("A=0x%x X=0x%x Y=0x%x P=0x%x SP=0x%x", 
 							    current_state->A,
 							    current_state->X,
 							    current_state->Y,
-							    current_state->P);
+							    current_state->P,
+							    current_state->sp);
 }
 
 void step() {

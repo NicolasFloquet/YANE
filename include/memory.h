@@ -13,6 +13,12 @@ typedef struct {
 }memory_zone;
 
 void init_ram();
+
+void dump_zero();
+void dump_stack();
+void dump_ram();
+void dump_all();
+
 char* zone_name(unsigned short int addr);
 char read_memory(unsigned short int addr);
 void write_memory(unsigned short int addr, unsigned char data);
