@@ -12,17 +12,17 @@ void adc(addr_mode mode) {
 	unsigned char src;
 	unsigned int tmp;
 	switch(mode) {
-	    case AM_IMM:    
+	    	case AM_IMM:    
 			src = read_memory(state->pc+1);
 			state->pc += 2;
 			state->cycle += 2;
 			break;
-	    case AM_ZERO:    
-			src = read_memory((int)read_memory(state->pc+1));
+	    	case AM_ZERO:    
+			src = read_memory((int)read_memory(state->pc+1)%0x100);
 			state->pc += 2;
 			state->cycle += 3;
 			break;
-	    case AM_ZEROX:    
+	    	case AM_ZEROX:    
 			src = read_memory(((int)read_memory(state->pc+1) + state->X)%0x100);
 			state->pc += 2;
 			state->cycle += 4;
@@ -32,7 +32,7 @@ void adc(addr_mode mode) {
 			state->pc += 3;
 			state->cycle += 4;
 			break;
-	    case AM_ABSX:
+	    	case AM_ABSX:
 			src = read_memory( read_memory16(state->pc+1) + state->X );
 			state->pc += 3;
 			state->cycle += 4; /* *** "Add 1 when page boundary is crossed." *** */
@@ -43,12 +43,12 @@ void adc(addr_mode mode) {
 			state->cycle += 4; /* *** "Add 1 when page boundary is crossed." *** */
 			break;
 		case AM_INDX:
-			src = read_memory(read_memory16((read_memory(state->pc+1)+state->X)));
+			src = read_memory(read_memory16(((read_memory(state->pc+1)+state->X) & 0xff)));
 			state->pc += 2;
 			state->cycle += 6;
 			break;
 		case AM_INDY:
-			src = read_memory(read_memory16(read_memory(state->pc+1))+state->Y);
+			src = read_memory(read_memory16((read_memory(state->pc+1) & 0xff))+(state->Y & 0xff));
 			state->pc += 2;
 			state->cycle += 5;
 			break;
@@ -114,7 +114,7 @@ void and(addr_mode mode) {
 			state->cycle += 2;
 			break;
 	    case AM_ZERO:    
-			state->A = state->A & read_memory((int)read_memory(state->pc+1));
+			state->A = state->A & read_memory((int)read_memory(state->pc+1)%0x100);
 			state->pc += 2;
 			state->cycle += 3;
 			break;
@@ -139,12 +139,12 @@ void and(addr_mode mode) {
 			state->cycle += 4; /* *** "Add 1 when page boundary is crossed." *** */
 			break;
 		case AM_INDX:
-			state->A = state->A & read_memory(read_memory16((read_memory(state->pc+1)+state->X)));
+			state->A = state->A & read_memory(read_memory16(((read_memory(state->pc+1)+state->X) & 0xff)));
 			state->pc += 2;
 			state->cycle += 6;
 			break;
 		case AM_INDY:
-			state->A = state->A & read_memory(read_memory16(read_memory(state->pc+1))+state->Y);
+			state->A = state->A & read_memory(read_memory16((read_memory(state->pc+1) & 0xff))+(state->Y & 0xff));
 			state->pc += 2;
 			state->cycle += 5;
 			break;
@@ -161,6 +161,66 @@ void and(addr_mode mode) {
 	    SET_SIGN(state->P);
 	else
 		CLEAR_SIGN(state->P);
+}
+void asl(addr_mode mode) {
+	cpu_state* state = get_current_cpu_state();
+	unsigned char src;
+	switch(mode) {
+		case AM_NONE:
+			src = state->A;
+			state->A = src << 1;
+
+			state->pc += 1;
+			state->cycle += 2;
+			break;
+	    	case AM_ZERO:    
+			src = read_memory((int)read_memory(state->pc+1)%0x100);
+			write_memory((int)read_memory(state->pc+1), src << 1);
+
+			state->pc += 2;
+			state->cycle += 5;
+			break;
+	    	case AM_ZEROX:    
+			src = read_memory(((int)read_memory(state->pc+1) + state->X)%0x100);
+			write_memory(((int)read_memory(state->pc+1) + state->X)%0x100, src << 1);
+
+			state->pc += 2;
+			state->cycle += 6;
+			break;
+		case AM_ABS:
+			src = read_memory(read_memory16(state->pc+1) );
+			write_memory(read_memory16(state->pc+1), src << 1 );
+
+			state->pc += 3;
+			state->cycle += 6;
+			break;
+	    	case AM_ABSX:
+			src = read_memory( read_memory16(state->pc+1) + state->X );
+			write_memory( read_memory16(state->pc+1) + state->X, src << 1 );
+
+			state->pc += 3;
+			state->cycle +=7;
+			break;
+	    default:
+		printf("invalid addressing mode");
+	}
+
+	if(src & 0x80)
+		SET_CARRY(state->P);
+	else
+		CLEAR_CARRY(state->P);
+	
+	src = src << 1;
+
+	if(src & 0x80)
+		SET_SIGN(state->P);
+	else
+		CLEAR_SIGN(state->P);	
+
+	if(src == 0)
+		SET_ZERO(state->P);
+	else
+		CLEAR_ZERO(state->P);
 }
 void bcc(addr_mode mode) {
 	cpu_state* state = get_current_cpu_state();
@@ -216,7 +276,7 @@ void bit(addr_mode mode) {
 	
 	switch(mode) {
 	    case AM_ZERO:
-			data = read_memory((int)read_memory(state->pc+1));
+			data = read_memory((int)read_memory(state->pc+1)%0x100);
 
 			state->P &= 0x3f;
 			state->P |= (data & 0xC0); /* D7->SIGN, D6->OVERF */
@@ -355,7 +415,7 @@ void cmp(addr_mode mode) {
 			state->cycle += 2;
 			break;
 	    case AM_ZERO:    
-			data = read_memory((int)read_memory(state->pc+1));
+			data = read_memory((int)read_memory(state->pc+1)%0x100);
 			state->pc += 2;
 			state->cycle += 3;
 			break;
@@ -380,12 +440,12 @@ void cmp(addr_mode mode) {
 			state->cycle += 4; /* *** "Add 1 when page boundary is crossed." *** */
 			break;
 		case AM_INDX:
-			data = read_memory(read_memory16((read_memory(state->pc+1)+state->X)));
+			data = read_memory(read_memory16(((read_memory(state->pc+1)+state->X) & 0xff)));
 			state->pc += 2;
 			state->cycle += 6;
 			break;
 		case AM_INDY:
-			data = read_memory(read_memory16(read_memory(state->pc+1))+state->Y);
+			data = read_memory(read_memory16((read_memory(state->pc+1) & 0xff))+(state->Y & 0xff));
 			state->pc += 2;
 			state->cycle += 5; /* *** "Add 1 when page boundary is crossed." *** */
 			break;
@@ -424,7 +484,7 @@ void cpx(addr_mode mode) {
 			state->cycle += 2;
 			break;
 	    case AM_ZERO:    
-			data = read_memory((int)read_memory(state->pc+1));
+			data = read_memory((int)read_memory(state->pc+1)%0x100);
 			state->pc += 2;
 			state->cycle += 3;
 			break;
@@ -468,7 +528,7 @@ void cpy(addr_mode mode) {
 			state->cycle += 2;
 			break;
 	    case AM_ZERO:    
-			data = read_memory((int)read_memory(state->pc+1));
+			data = read_memory((int)read_memory(state->pc+1)%0x100);
 			state->pc += 2;
 			state->cycle += 3;
 			break;
@@ -546,7 +606,7 @@ void eor(addr_mode mode) {
 			state->cycle += 2;
 			break;
 	    case AM_ZERO:    
-			state->A = state->A ^ read_memory((int)read_memory(state->pc+1));
+			state->A = state->A ^ read_memory((int)read_memory(state->pc+1)%0x100);
 			state->pc += 2;
 			state->cycle += 3;
 			break;
@@ -571,12 +631,12 @@ void eor(addr_mode mode) {
 			state->cycle += 4; /* *** "Add 1 when page boundary is crossed." *** */
 			break;
 		case AM_INDX:
-			state->A = state->A ^ read_memory(read_memory16((read_memory(state->pc+1)+state->X)));
+			state->A = state->A ^ read_memory(read_memory16(((read_memory(state->pc+1)+state->X) & 0xff)));
 			state->pc += 2;
 			state->cycle += 6;
 			break;
 		case AM_INDY:
-			state->A = state->A ^ read_memory(read_memory16(read_memory(state->pc+1))+state->Y);
+			state->A = state->A ^ read_memory(read_memory16((read_memory(state->pc+1) & 0xff))+(state->Y & 0xff));
 			state->pc += 2;
 			state->cycle += 5;
 			break;
@@ -633,17 +693,17 @@ void iny(addr_mode mode) {
 void lda(addr_mode mode) {
 	cpu_state* state = get_current_cpu_state();
 	switch(mode) {
-	    case AM_IMM:    
+	    	case AM_IMM:    
 			state->A = read_memory(state->pc+1);
 			state->pc += 2;
 			state->cycle += 2;
 			break;
-	    case AM_ZERO:    
-			state->A = read_memory((int)read_memory(state->pc+1));
+	    	case AM_ZERO:    
+			state->A = read_memory((int)read_memory(state->pc+1)%0x100);
 			state->pc += 2;
 			state->cycle += 3;
 			break;
-	    case AM_ZEROX:    
+	    	case AM_ZEROX:    
 			state->A = read_memory(((int)read_memory(state->pc+1) + state->X)%0x100);
 			state->pc += 2;
 			state->cycle += 4;
@@ -653,7 +713,7 @@ void lda(addr_mode mode) {
 			state->pc += 3;
 			state->cycle += 4;
 			break;
-	    case AM_ABSX:
+	    	case AM_ABSX:
 			state->A = read_memory( read_memory16(state->pc+1) + state->X );
 			state->pc += 3;
 			state->cycle += 4; /* *** "Add 1 when page boundary is crossed." *** */
@@ -664,12 +724,13 @@ void lda(addr_mode mode) {
 			state->cycle += 4; /* *** "Add 1 when page boundary is crossed." *** */
 			break;
 		case AM_INDX:
-			state->A = read_memory(read_memory16((read_memory(state->pc+1)+state->X)));
+			printf("\n=>0x%x\n",read_memory16(((read_memory(state->pc+1)+state->X) & 0xff)));
+			state->A = read_memory(read_memory16(((read_memory(state->pc+1)+state->X) & 0xff)));
 			state->pc += 2;
 			state->cycle += 6;
 			break;
 		case AM_INDY:
-			state->A = read_memory(read_memory16(read_memory(state->pc+1))+state->Y);
+			state->A = read_memory(read_memory16((read_memory(state->pc+1) & 0xff))+(state->Y & 0xff));
 			state->pc += 2;
 			state->cycle += 5; /* *** "Add 1 when page boundary is crossed." *** */
 			break;
@@ -683,24 +744,24 @@ void lda(addr_mode mode) {
 		CLEAR_ZERO(state->P);
 		
 	if(state->A & 0x80)
-	    SET_SIGN(state->P);
+	    	SET_SIGN(state->P);
 	else
 		CLEAR_SIGN(state->P);
 }
 void ldx(addr_mode mode) {
 	cpu_state* state = get_current_cpu_state();
 	switch(mode) {
-	    case AM_IMM:    
+	    	case AM_IMM:    
 			state->X = read_memory(state->pc+1);
 			state->pc += 2;
 			state->cycle += 2;
 			break;
-	    case AM_ZERO:    
-			state->X = read_memory((int)read_memory(state->pc+1));
+	    	case AM_ZERO:    
+			state->X = read_memory((int)read_memory(state->pc+1)%0x100);
 			state->pc += 2;
 			state->cycle += 3;
 			break;
-	    case AM_ZEROY:    
+		case AM_ZEROY:    
 			state->X = read_memory(((int)read_memory(state->pc+1) + state->Y)%0x100);
 			state->pc += 2;
 			state->cycle += 4;
@@ -710,7 +771,7 @@ void ldx(addr_mode mode) {
 			state->pc += 3;
 			state->cycle += 4;
 			break;
-	    case AM_ABSY:
+	    	case AM_ABSY:
 			state->X = read_memory( read_memory16(state->pc+1) + state->Y );
 			state->pc += 3;
 			state->cycle += 4; /* *** "Add 1 when page boundary is crossed." *** */
@@ -725,7 +786,7 @@ void ldx(addr_mode mode) {
 		CLEAR_ZERO(state->P);
 		
 	if(state->X & 0x80)
-	    SET_SIGN(state->P);
+	    	SET_SIGN(state->P);
 	else
 		CLEAR_SIGN(state->P);
 }
@@ -738,7 +799,7 @@ void ldy(addr_mode mode) {
 			state->cycle += 2;
 			break;
 	    case AM_ZERO:    
-			state->Y = read_memory((int)read_memory(state->pc+1));
+			state->Y = read_memory((int)read_memory(state->pc+1)%0x100);
 			state->pc += 2;
 			state->cycle += 3;
 			break;
@@ -771,6 +832,61 @@ void ldy(addr_mode mode) {
 	else
 	    CLEAR_SIGN(state->P);
 }
+void lsr(addr_mode mode) {
+	cpu_state* state = get_current_cpu_state();
+	unsigned char src;
+	switch(mode) {
+		case AM_NONE:
+			src = state->A;
+			state->A = src>> 1;
+
+			state->pc += 1;
+			state->cycle += 2;
+			break;
+	    	case AM_ZERO:    
+			src = read_memory((int)read_memory(state->pc+1)%0x100);
+			write_memory((int)read_memory(state->pc+1), src >> 1);
+
+			state->pc += 2;
+			state->cycle += 5;
+			break;
+	    	case AM_ZEROX:    
+			src = read_memory(((int)read_memory(state->pc+1) + state->X)%0x100);
+			write_memory(((int)read_memory(state->pc+1) + state->X)%0x100, src>>1);
+
+			state->pc += 2;
+			state->cycle += 6;
+			break;
+		case AM_ABS:
+			src = read_memory(read_memory16(state->pc+1) );
+			write_memory(read_memory16(state->pc+1), src>>1 );
+
+			state->pc += 3;
+			state->cycle += 6;
+			break;
+	    	case AM_ABSX:
+			src = read_memory( read_memory16(state->pc+1) + state->X );
+			write_memory( read_memory16(state->pc+1) + state->X, src>>1 );
+
+			state->pc += 3;
+			state->cycle +=7;
+			break;
+	    default:
+		printf("invalid addressing mode");
+	}
+
+	CLEAR_SIGN(state->P);
+
+	if(src & 0x1)
+		SET_CARRY(state->P);
+	else
+		CLEAR_CARRY(state->P);
+
+	if((src>>1) == 0)
+		SET_ZERO(state->P);
+	else
+		CLEAR_ZERO(state->P);
+}
 void jmp(addr_mode mode) {
 	cpu_state* state = get_current_cpu_state();
 	switch(mode) {
@@ -789,8 +905,8 @@ void jmp(addr_mode mode) {
 void jsr(addr_mode mode) {
 	cpu_state* state = get_current_cpu_state();
 
-	stack_push((state->pc+2) & 0x00FF);
 	stack_push(((state->pc+2) & 0xFF00) >> 8);
+	stack_push((state->pc+2) & 0x00FF);
 	state->pc = read_memory16(state->pc+1);
 	state->cycle += 6;
 }
@@ -845,17 +961,17 @@ void ora(addr_mode mode) {
 	cpu_state* state = get_current_cpu_state();
 	
 	switch(mode) {
-	    case AM_IMM:    
+	    	case AM_IMM:    
 			state->A = state->A | read_memory(state->pc+1);
 			state->pc += 2;
 			state->cycle += 2;
 			break;
-	    case AM_ZERO:    
-			state->A = state->A | read_memory((int)read_memory(state->pc+1));
+	    	case AM_ZERO:    
+			state->A = state->A | read_memory((int)read_memory(state->pc+1)%0x100);
 			state->pc += 2;
 			state->cycle += 3;
 			break;
-	    case AM_ZEROX:    
+	    	case AM_ZEROX:    
 			state->A = state->A | read_memory(((int)read_memory(state->pc+1) + state->X)%0x100);
 			state->pc += 2;
 			state->cycle += 4;
@@ -865,7 +981,7 @@ void ora(addr_mode mode) {
 			state->pc += 3;
 			state->cycle += 4;
 			break;
-	    case AM_ABSX:
+	    	case AM_ABSX:
 			state->A = state->A | read_memory( read_memory16(state->pc+1) + state->X );
 			state->pc += 3;
 			state->cycle += 4; /* *** "Add 1 when page boundary is crossed." *** */
@@ -876,12 +992,12 @@ void ora(addr_mode mode) {
 			state->cycle += 4; /* *** "Add 1 when page boundary is crossed." *** */
 			break;
 		case AM_INDX:
-			state->A = state->A | read_memory(read_memory16((read_memory(state->pc+1)+state->X)));
+			state->A = state->A | read_memory(read_memory16(((read_memory(state->pc+1)+state->X) & 0xff)));
 			state->pc += 2;
 			state->cycle += 6;
 			break;
 		case AM_INDY:
-			state->A = state->A | read_memory(read_memory16(read_memory(state->pc+1))+state->Y);
+			state->A = state->A | read_memory(read_memory16((read_memory(state->pc+1) & 0xff))+(state->Y & 0xff));
 			state->pc += 2;
 			state->cycle += 5;
 			break;
@@ -899,10 +1015,178 @@ void ora(addr_mode mode) {
 	else
 		CLEAR_SIGN(state->P);
 }
+void rol(addr_mode mode) {
+	cpu_state* state = get_current_cpu_state();
+	unsigned char src;
+	unsigned char tmp = 0;
+	switch(mode) {
+		case AM_NONE:
+			src = state->A;
+			if(GET_CARRY(state->P))
+				tmp |= 0x01;
+			tmp |= src << 1;
+
+			state->A = tmp;
+
+			state->pc += 1;
+			state->cycle += 2;
+			break;
+	    	case AM_ZERO:    
+			src = read_memory((int)read_memory(state->pc+1)%0x100);
+			if(GET_CARRY(state->P))
+				tmp |= 0x01;
+			tmp |= src << 1;
+
+			write_memory((int)read_memory(state->pc+1), tmp);
+
+			state->pc += 2;
+			state->cycle += 5;
+			break;
+	    	case AM_ZEROX:    
+			src = read_memory(((int)read_memory(state->pc+1) + state->X)%0x100);
+			if(GET_CARRY(state->P))
+				tmp |= 0x01;
+			tmp |= src << 1;
+
+			write_memory(((int)read_memory(state->pc+1) + state->X)%0x100, tmp);
+
+			state->pc += 2;
+			state->cycle += 6;
+			break;
+		case AM_ABS:
+			src = read_memory(read_memory16(state->pc+1) );
+			if(GET_CARRY(state->P))
+				tmp |= 0x01;
+			tmp |= src << 1;
+
+			write_memory(read_memory16(state->pc+1), tmp );
+
+			state->pc += 3;
+			state->cycle += 6;
+			break;
+	    	case AM_ABSX:
+			src = read_memory( read_memory16(state->pc+1) + state->X );
+			if(GET_CARRY(state->P))
+				tmp |= 0x01;
+			tmp |= src << 1;
+
+			write_memory( read_memory16(state->pc+1) + state->X, tmp );
+
+			state->pc += 3;
+			state->cycle +=7;
+			break;
+		default:
+			printf("invalid addressing mode");
+	}
+
+	
+	if(src & 0x80)
+		SET_CARRY(state->P);
+	else
+		CLEAR_CARRY(state->P);
+
+	if(tmp & 0x80)
+		SET_SIGN(state->P);
+	else
+		CLEAR_SIGN(state->P);
+
+
+	if(tmp == 0)
+		SET_ZERO(state->P);
+	else
+		CLEAR_ZERO(state->P);
+}
+void ror(addr_mode mode) {
+	cpu_state* state = get_current_cpu_state();
+	unsigned char src;
+	unsigned char tmp = 0;
+	switch(mode) {
+		case AM_NONE:
+			src = state->A;
+			if(GET_CARRY(state->P))
+				tmp |= 0x80;
+			tmp |= src >> 1;
+
+			state->A = tmp;
+
+			state->pc += 1;
+			state->cycle += 2;
+			break;
+	    	case AM_ZERO:    
+			src = read_memory((int)read_memory(state->pc+1)%0x100);
+			if(GET_CARRY(state->P))
+				tmp |= 0x80;
+			tmp |= src >> 1;
+
+			write_memory((int)read_memory(state->pc+1), tmp);
+
+			state->pc += 2;
+			state->cycle += 5;
+			break;
+	    	case AM_ZEROX:    
+			src = read_memory(((int)read_memory(state->pc+1) + state->X)%0x100);
+			if(GET_CARRY(state->P))
+				tmp |= 0x80;
+			tmp |= src >> 1;
+
+			write_memory(((int)read_memory(state->pc+1) + state->X)%0x100, tmp);
+
+			state->pc += 2;
+			state->cycle += 6;
+			break;
+		case AM_ABS:
+			src = read_memory(read_memory16(state->pc+1) );
+			if(GET_CARRY(state->P))
+				tmp |= 0x80;
+			tmp |= src >> 1;
+
+			write_memory(read_memory16(state->pc+1), tmp );
+
+			state->pc += 3;
+			state->cycle += 6;
+			break;
+	    	case AM_ABSX:
+			src = read_memory( read_memory16(state->pc+1) + state->X );
+			if(GET_CARRY(state->P))
+				tmp |= 0x80;
+			tmp |= src >> 1;
+
+			write_memory( read_memory16(state->pc+1) + state->X, tmp );
+
+			state->pc += 3;
+			state->cycle +=7;
+			break;
+		default:
+			printf("invalid addressing mode");
+	}
+
+	
+	if(src & 0x01)
+		SET_CARRY(state->P);
+	else
+		CLEAR_CARRY(state->P);
+
+	if(tmp & 0x80)
+		SET_SIGN(state->P);
+	else
+		CLEAR_SIGN(state->P);
+
+
+	if(tmp == 0)
+		SET_ZERO(state->P);
+	else
+		CLEAR_ZERO(state->P);
+}
+void rti(addr_mode mode) {
+	cpu_state* state = get_current_cpu_state();
+    	state->P = stack_pop() | 0x20;
+	state->pc = stack_pop()+(stack_pop()<<8);
+	state->cycle += 6;
+}
 void rts(addr_mode mode) {
 	cpu_state* state = get_current_cpu_state();
 
-	state->pc = (stack_pop()<<8)+stack_pop()+1;
+	state->pc = stack_pop()+(stack_pop()<<8)+1;
 	state->cycle += 6;
 }
 void sbc(addr_mode mode) {
@@ -917,7 +1201,7 @@ void sbc(addr_mode mode) {
 			state->cycle += 2;
 			break;
 	    case AM_ZERO:    
-			data = read_memory((int)read_memory(state->pc+1));
+			data = read_memory((int)read_memory(state->pc+1)%0x100);
 			state->pc += 2;
 			state->cycle += 3;
 			break;
@@ -942,12 +1226,12 @@ void sbc(addr_mode mode) {
 			state->cycle += 4; /* *** "Add 1 when page boundary is crossed." *** */
 			break;
 		case AM_INDX:
-			data = read_memory(read_memory16((read_memory(state->pc+1)+state->X)));
+			data = read_memory(read_memory16(((read_memory(state->pc+1)+state->X) & 0xff)));
 			state->pc += 2;
 			state->cycle += 6;
 			break;
 		case AM_INDY:
-			data = read_memory(read_memory16(read_memory(state->pc+1))+state->Y);
+			data = read_memory(read_memory16((read_memory(state->pc+1) & 0xff))+ (state->Y & 0xff));
 			state->pc += 2;
 			state->cycle += 5; /* *** "Add 1 when page boundary is crossed." *** */
 			break;
@@ -1011,13 +1295,13 @@ void sei(addr_mode mode) {
 void sta(addr_mode mode) {
 	cpu_state* state = get_current_cpu_state();
 	switch(mode) {
-	    case AM_ZERO:    
-			write_memory((int)read_memory(state->pc+1), state->A);
+	    	case AM_ZERO:    
+			write_memory(((int)read_memory(state->pc+1)%0x100) & 0xff, state->A);
 			state->pc += 2;
 			state->cycle += 3;
 			break;
-	    case AM_ZEROX:
-			write_memory(((int)read_memory(state->pc+1) + state->X)%0x100, state->A);
+	    	case AM_ZEROX:
+			write_memory((((int) read_memory(state->pc+1) + state->X)%0x100) & 0xff, state->A);
 			state->pc += 2;
 			state->cycle += 4;
 			break;
@@ -1026,7 +1310,7 @@ void sta(addr_mode mode) {
 			state->pc += 3;
 			state->cycle += 4;
 			break;
-	    case AM_ABSX:
+	   	case AM_ABSX:
 			write_memory( read_memory16(state->pc+1) + state->X, state->A);
 			state->pc += 3;
 			state->cycle += 5;
@@ -1037,12 +1321,12 @@ void sta(addr_mode mode) {
 			state->cycle += 5;
 			break;
 		case AM_INDX:
-			write_memory(read_memory16((read_memory(state->pc+1)+state->X)), state->A);
+			write_memory(read_memory16(((read_memory(state->pc+1)+state->X) & 0xff)), state->A);
 			state->pc += 2;
 			state->cycle += 6;
 			break;
 		case AM_INDY:
-			write_memory(read_memory16(read_memory(state->pc+1))+state->Y, state->A);
+			write_memory(read_memory16((read_memory(state->pc+1) & 0xff))+(state->Y & 0xff), state->A);
 			state->pc += 2;
 			state->cycle += 6;
 			break;
@@ -1053,30 +1337,30 @@ void sta(addr_mode mode) {
 void stx(addr_mode mode) {
     cpu_state* state = get_current_cpu_state();
     switch(mode) {
-    	case AM_ZERO:    
-	    write_memory((int)read_memory(state->pc+1), state->X);
-	    state->pc += 2;
-	    state->cycle += 3;
-	    break;
-    	case AM_ZEROY:    
-	    write_memory(((int)read_memory(state->pc+1) + state->Y)%0x100, state->X);
-	    state->pc += 2;
-	    state->cycle += 4;
-	    break;
+	case AM_ZERO:    
+		write_memory((int)read_memory(state->pc+1)%0x100, state->X);
+		state->pc += 2;
+		state->cycle += 3;
+		break;
+	case AM_ZEROY:    
+		write_memory(((int)read_memory(state->pc+1) + state->Y)%0x100, state->X);
+		state->pc += 2;
+		state->cycle += 4;
+		break;
 	case AM_ABS:
-	    write_memory( read_memory16(state->pc+1), state->X);
-	    state->pc += 3;
-	    state->cycle += 4;
-	    break;
+		write_memory( read_memory16(state->pc+1), state->X);
+		state->pc += 3;
+		state->cycle += 4;
+		break;
 	default:
-	    printf("invalid addressing mode (0x%x)", mode);
+		printf("invalid addressing mode (0x%x)", mode);
     }
 }
 void sty(addr_mode mode) {
     cpu_state* state = get_current_cpu_state();
     switch(mode) {
     	case AM_ZERO:    
-	    write_memory((int)read_memory(state->pc+1), state->Y);
+	    write_memory((int)read_memory(state->pc+1)%0x100, state->Y);
 	    state->pc += 2;
 	    state->cycle += 3;
 	    break;
@@ -1099,12 +1383,12 @@ void tax(addr_mode mode) {
 
     state->X = state->A;
 
-    if(state->Y==0)
+    if(state->X==0)
 	    SET_ZERO(state->P);
     else
 	    CLEAR_ZERO(state->P);
 	    
-    if(state->Y & 0x80)
+    if(state->X & 0x80)
 	    SET_SIGN(state->P);
     else
 	    CLEAR_SIGN(state->P);
@@ -1195,15 +1479,15 @@ void tya(addr_mode mode) {
 
 Instruction instruction_list[57]={
 	{"UNK", NULL},
-	{"ADC", adc},{"AND", and},{"ASL", NULL},{"BCC", bcc},{"BCS", bcs},
+	{"ADC", adc},{"AND", and},{"ASL", asl},{"BCC", bcc},{"BCS", bcs},
 	{"BEQ", beq},{"BIT", bit},{"BMI", bmi},{"BNE", bne},{"BPL", bpl},
 	{"BRK", NULL},{"BVC", bvc},{"BVS", bvs},{"CLC", clc},{"CLD", cld},
 	{"CLI", cli},{"CLV", clv},{"CMP", cmp},{"CPX", cpx},{"CPY", cpy},
 	{"DEC", NULL},{"DEX", dex},{"DEY", dey},{"EOR", eor},{"INC", NULL},
 	{"INX", inx},{"INY", iny},{"JMP", jmp},{"JSR", jsr},{"LDA", lda},
-	{"LDX", ldx},{"LDY", ldy},{"LSR", NULL},{"NOP", nop},{"ORA", ora},
-	{"PHA", pha},{"PHP", php},{"PLA", pla},{"PLP", plp},{"ROL", NULL},
-	{"ROR", NULL},{"RTI", NULL},{"RTS", rts},{"SBC", sbc},{"SEC", sec},
+	{"LDX", ldx},{"LDY", ldy},{"LSR", lsr},{"NOP", nop},{"ORA", ora},
+	{"PHA", pha},{"PHP", php},{"PLA", pla},{"PLP", plp},{"ROL", rol},
+	{"ROR", ror},{"RTI", rti},{"RTS", rts},{"SBC", sbc},{"SEC", sec},
 	{"SED", sed},{"SEI", sei},{"STA", sta},{"STX", stx},{"STY", sty},
 	{"TAX", tax},{"TAY", tay},{"TSX", tsx},{"TXA", txa},{"TXS", txs},
 	{"TYA", tya}
@@ -1517,10 +1801,10 @@ void print_instruction() {
 				printf("$%X, Y\t", read_memory16(state->pc + 1) & 0xffff);	
 				break;
 			case AM_INDX:
-				printf("($%X, X)\t", read_memory16(state->pc + 1) & 0xffff);
+				printf("($%X, X)\t", read_memory(state->pc + 1) & 0xff);
 				break;
 			case AM_INDY:
-				printf("($%X), Y\t", read_memory16(state->pc + 1) & 0xffff);	
+				printf("($%X), Y\t", read_memory(state->pc + 1) & 0xff);	
 				break;
 			default:
 				printf("Wait... wut? (0x%x)",opcode_list[opcode].mode);
