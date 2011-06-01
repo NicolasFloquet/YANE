@@ -10,6 +10,7 @@
 typedef struct {
     char* rom_path;
     unsigned short int breakpoint;
+    int run;
     int dump_ram;
     int dump_stack;
     int dump_zero;
@@ -30,6 +31,7 @@ params* parse_args(int argc, char** argv) {
 
     new_params->rom_path = NULL;
     new_params->breakpoint = 0;
+    new_params->run = 0;
     new_params->dump_ram = 0;
     new_params->dump_stack = 0;
     new_params->dump_zero = 0;
@@ -39,6 +41,9 @@ params* parse_args(int argc, char** argv) {
 	if(strcmp("-h", argv[i]) == 0) {
 	    usage();
 	    exit(0);
+	}
+	if(strcmp("-r", argv[i]) == 0) {
+	    new_params->run = 1;
 	}
 	else if(strcmp("-b", argv[i]) == 0) {
 	    i++;
@@ -86,7 +91,7 @@ int main(int argc, char** argv) {
 	p = parse_args(argc, argv);
 
 	fd = fopen(p->rom_path, "r");
-
+	unsigned short int last_pc = 0;
 	if(fd != NULL) {
 		load_rom(fd);
 		create_cpu_state();
@@ -96,8 +101,26 @@ int main(int argc, char** argv) {
 			printf("break at 0x%x\n", p->breakpoint);
 			runto(p->breakpoint);
 		}
+		if(p->run == 1) {
+			while(1) {
+			    if(p->dump_zero)
+				dump_zero();
+			    if(p->dump_stack)
+				dump_stack();
+			    if(p->dump_ram)
+				dump_ram();
+			    if(p->dump_all)
+				dump_all();
+			    step();
+			    if(last_pc == get_current_cpu_state()->pc)
+				exit(0);
+			    last_pc = get_current_cpu_state()->pc;
+			    printf("\n");
+			}
+		}
 
 		while(1){
+		    
 		    if(p->dump_zero)
 			dump_zero();
 		    if(p->dump_stack)
@@ -107,6 +130,7 @@ int main(int argc, char** argv) {
 		    if(p->dump_all)
 			dump_all();
 		    step();
+
 		    while (getchar() != '\n');
 		}
 	}

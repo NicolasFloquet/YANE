@@ -74,7 +74,6 @@ char* zone_name(unsigned short int addr) {
 char read_memory(unsigned short int addr) {
     int i = find_zone(addr);
     char ret = 0;
-	printf("[0x%x]\n", addr);
     if(memory_map[i].reader == NULL)
 	printf("Reader for %s is not implemented yet.\n", memory_map[i].name);
     else

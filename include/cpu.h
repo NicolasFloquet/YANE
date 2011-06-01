@@ -38,6 +38,7 @@ typedef struct {
     unsigned char X;
     unsigned char Y;
     unsigned char P;
+    unsigned char br;
 
     /* Debug info */
     int cycle;

@@ -20,6 +20,7 @@ void create_cpu_state() {
 	state->Y = 0;
 
 	state->P = 0x24; /* Le 5ième bit n'es pas utilisé et toujours set à 1, et interruptions désactivées au début */
+	state->br = 0;
 
 	state->cycle = 0;
 	
