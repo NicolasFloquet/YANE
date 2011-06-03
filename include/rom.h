@@ -37,7 +37,8 @@ void load_rom(FILE* fd);
 NES_ROM* get_current_rom();
 ROM_HEADER* load_header(FILE* fd);
 
-unsigned char prg_read(unsigned short int addr);
+unsigned char prg1_read(unsigned short int addr);
+unsigned char prg2_read(unsigned short int addr);
 
 
 /* Debug functions */

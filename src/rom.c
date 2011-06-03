@@ -37,8 +37,15 @@ ROM_HEADER* load_header(FILE* fd) {
 	return header;
 }
 
-unsigned char prg_read(unsigned short int addr) {
-	return current_rom->prg_rom[addr-0xC000];
+unsigned char prg1_read(unsigned short int addr) {
+		return current_rom->prg_rom[addr-0x8000];
+}
+
+unsigned char prg2_read(unsigned short int addr) {
+	if(current_rom->header->prg_pcount == 1)
+		return current_rom->prg_rom[addr-0xC000];
+	else
+		return current_rom->prg_rom[addr-0x8000];
 }
 
 void print_header(ROM_HEADER* header) {

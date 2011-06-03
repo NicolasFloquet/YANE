@@ -1038,7 +1038,7 @@ void lsr(addr_mode mode) {
 			break;
 	    	case AM_ZERO:    
 			src = read_memory((int)read_memory(state->pc+1)%0x100);
-			write_memory((int)read_memory(state->pc+1), src >> 1);
+			write_memory(((int)read_memory(state->pc+1))&0xff, src >> 1);
 
 			state->pc += 2;
 			state->cycle += 5;
@@ -1972,7 +1972,7 @@ addr_mode get_addr_mode(unsigned char opcode) {
 
 void exec_instruction(unsigned char opcode) {
     if(instruction_list[opcode_list[opcode].inst].handler == NULL) {
-		printf("%s not implemented.\t", instruction_list[opcode_list[opcode].inst].name);
+		printf("%s not implemented.(OPCODE:%X\t)", instruction_list[opcode_list[opcode].inst].name, opcode);
     }
     else {
 		instruction_list[opcode_list[opcode].inst].handler(opcode_list[opcode].mode); 

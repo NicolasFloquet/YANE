@@ -13,7 +13,7 @@ cpu_state* get_current_cpu_state() {
 void create_cpu_state() {
 	cpu_state* state = malloc(sizeof(cpu_state));
 	
-	state->pc = 0xC000; /* à voir */
+	state->pc = 0x8000; /* à voir */
 	state->sp = 0xFD;
 	state->A = 0;
 	state->X = 0;

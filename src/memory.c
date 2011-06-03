@@ -25,8 +25,8 @@ static const memory_zone memory_map[] = {
     {0x4000, 0x401f, "IO regs2", NULL, NULL},
     {0x4020, 0x5fff, "exp RAM", NULL, NULL},
     {0x6000, 0x7fff, "SRAM", NULL, NULL},
-    {0x8000, 0xbfff, "PRG-ROM low bank", prg_read, NULL},	/* ROM => read-only */
-    {0xc000, 0xffff, "PGR-ROM high bank", prg_read, NULL}	/* ROM => read-only */
+    {0x8000, 0xbfff, "PRG-ROM low bank", prg1_read, NULL},	/* ROM => read-only */
+    {0xc000, 0xffff, "PGR-ROM high bank", prg2_read, NULL}	/* ROM => read-only */
 };
 
 
@@ -85,7 +85,7 @@ char read_memory(unsigned short int addr) {
 void write_memory(unsigned short int addr, unsigned char data) {
     int i = find_zone(addr);
 
-    if(memory_map[i].reader == NULL)
+    if(memory_map[i].writer == NULL)
 	printf("Writer for %s is not implemented yet.\n", memory_map[i].name);
     else
 	memory_map[i].writer(addr,data);
