@@ -5,8 +5,6 @@
 #include <opcodes.h>
 #include <cpu.h>
 
-#define read_memory16(addr) (((unsigned short int)read_memory(addr+1)<<8) | ((unsigned short int)read_memory(addr)&0xFF))
-#define read_memory16z(addr) (((unsigned short int)read_memory((addr+1)%0x100)<<8) | ((unsigned short int)read_memory(addr%0x100)&0xFF))
 
 void aax(addr_mode mode) {
 	cpu_state* state = get_current_cpu_state();

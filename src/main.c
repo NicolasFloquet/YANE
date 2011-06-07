@@ -5,6 +5,7 @@
 #include <cpu.h>
 #include <memory.h>
 #include <opcodes.h>
+#include <ppu.h>
 #include <rom.h>
 
 typedef struct {
@@ -14,6 +15,7 @@ typedef struct {
     int dump_ram;
     int dump_stack;
     int dump_zero;
+    int dump_chrrom;
     int dump_all;
 }params;
 
@@ -35,6 +37,7 @@ params* parse_args(int argc, char** argv) {
     new_params->dump_ram = 0;
     new_params->dump_stack = 0;
     new_params->dump_zero = 0;
+    new_params->dump_chrrom = 0;
     new_params->dump_all = 0;
 
     while(i<argc) {
@@ -59,6 +62,9 @@ params* parse_args(int argc, char** argv) {
 	    }
 	    else if(strcmp("zero", argv[i]) == 0) {
 		new_params->dump_zero = 1;
+	    }
+	    else if(strcmp("chrrom", argv[i]) == 0) {
+		new_params->dump_chrrom = 1;
 	    }
 	    else if(strcmp("all", argv[i]) == 0) {
 		new_params->dump_all = 1;
@@ -94,8 +100,9 @@ int main(int argc, char** argv) {
 	unsigned short int last_pc = 0;
 	if(fd != NULL) {
 		load_rom(fd);
-		create_cpu_state();
 		init_ram();
+		ppu_init();
+		create_cpu_state();
 
 		if(p->breakpoint != 0) {
 			printf("break at 0x%x\n", p->breakpoint);
@@ -109,6 +116,8 @@ int main(int argc, char** argv) {
 				dump_stack();
 			    if(p->dump_ram)
 				dump_ram();
+			    if(p->dump_chrrom)
+				dump_chrrom();
 			    if(p->dump_all)
 				dump_all();
 			    step();
