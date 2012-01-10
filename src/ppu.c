@@ -5,56 +5,9 @@
 #include <cpu.h>
 #include <memory.h>
 #include <rom.h>
-
-#include <SDL/SDL.h>
+#include <framebuffer.h>
 
 static ppu_state* state = NULL;
-
-/* tmp */
-static SDL_Surface * screen;
-
-void _put_pixel(SDL_Surface * surface, Uint16 x, Uint16 y, Uint32 color)
-{
-    /* Nombre de bits par pixels de la surface d'écran */
-    Uint8 bpp = surface->format->BytesPerPixel;
-    /* Pointeur vers le pixel à remplacer (pitch correspond à la taille 
-       d'une ligne d'écran, c'est à dire (longueur * bitsParPixel) 
-       pour la plupart des cas) */
-    Uint8 * p = ((Uint8 *)surface->pixels) + y * surface->pitch + x * bpp;
-     switch(bpp)
-    {
-	  case 1:
-		*p = (Uint8) color;
-		break;
-        case 2:
-            *(Uint16 *)p = (Uint16) color;
-            break;
-        case 3:
-            if (SDL_BYTEORDER == SDL_BIG_ENDIAN)
-            {
-                *(Uint16 *)p = ((color >> 8) & 0xff00) | ((color >> 8) & 0xff);
-                *(p + 2) = color & 0xff;
-            }
-            else
-            {
-                *(Uint16 *)p = color & 0xffff;
-                *(p + 2) = ((color >> 16) & 0xff) ;
-            }
-            break;
-        case 4:
-            *(Uint32 *)p = color;
-            break;
-    }
-}
-
-void put_pixel(unsigned short int x,unsigned short int y,unsigned int color, unsigned char scale) {
-	int i,j;
-	for(i=0; i<scale; i++) {
-		for(j=0; j<scale; j++) {
-			_put_pixel(screen, x*scale+i, y*scale+j, color);
-		}
-	}
-}
 
 void put_sprite(unsigned short int x, unsigned short int y, unsigned char index, unsigned char bank, unsigned char scale) {
 	unsigned char* ptr1 = get_current_rom()->chr_rom +0x1000+(index*16);
@@ -66,9 +19,9 @@ void put_sprite(unsigned short int x, unsigned short int y, unsigned char index,
 		c1 = *ptr1;
 		c2 = *ptr2;
 		for(j=0; j<8; j++) {
-				put_pixel(	x+j,
+				fb_put_pixel(	x+j,
 							y+i,
-							SDL_MapRGB(screen->format, 0xff*((c1&0x80)>>7), 0xff*((c2&0x80)>>7), 0xff*((c1&0x80)>>7)),
+							(0xff*((c1&0x80)>>7))<<16 | (0xff*((c2&0x80)>>7))<<8 | (0xff*((c1&0x80)>>7)),
 							scale);
 				c1=c1<<1;
 				c2=c2<<1;
@@ -76,18 +29,6 @@ void put_sprite(unsigned short int x, unsigned short int y, unsigned char index,
 		ptr1++;
 		ptr2++;
 	}
-}
-
-void dump_chrrom() {
-	int x,y;
-	int i = 0;
-	for(x=0;x<16;x++) {
-		for(y=0; y<16; y++) {
-			put_sprite(y*8, x*8, i, 0, 2);
-			i++;
-		}
-	}
-	SDL_Flip(screen);
 }
 
 void ppu_init(params* p) {
@@ -102,12 +43,7 @@ void ppu_init(params* p) {
 	state->vram_addr_counter = 0;
 	state->ppu_status = 0x80;
 	
-	if (SDL_Init(SDL_INIT_VIDEO) == -1)
-    {
-        printf("Erreur lors de l'initialisation de SDL: %s\n", SDL_GetError());
-    }
-    screen = SDL_SetVideoMode(512, 480, 16, 
-                              SDL_HWSURFACE | SDL_DOUBLEBUF | SDL_ANYFORMAT);                          
+	fb_init();                    
 }
 
 void ppu_update() { 
@@ -144,7 +80,7 @@ void ppu_update() {
 	}
 	
 	//if(ppu_ctrl2 != 0) 
-		SDL_Flip(screen);
+		fb_update();
 	if(((state->ppu_ctrl1 & 0x80) != 0))
 		cpu_nmi();
 		

@@ -43,6 +43,7 @@ void aax(addr_mode mode) {
 	else
 		CLEAR_SIGN(state->P);
 }
+
 void adc(addr_mode mode) {
 	cpu_state* state = get_current_cpu_state();
 	unsigned char src;

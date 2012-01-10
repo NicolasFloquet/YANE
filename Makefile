@@ -4,7 +4,7 @@ OBJ := obj/
 SRC := src/
 CC := gcc
 
-OBJECTS=src/main.o src/rom.o src/opcodes.o src/cpu.o src/ppu.o src/memory.o 
+OBJECTS=src/main.o src/rom.o src/opcodes.o src/cpu.o src/ppu.o src/memory.o src/framebuffer.o
 OUTPUT=yane
 
 all: YANE

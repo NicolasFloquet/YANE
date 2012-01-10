@@ -10,7 +10,7 @@
 #include <rom.h>
 
 void usage() {
-    printf("USAGE:\tyane rom [-b bp_addr] [-d ram|stack|zero|chrrom|vram|all] [-h]\n");
+    printf("USAGE:\tyane rom [-b bp_addr] [-d ram|stack|zero|vram|all] [-h]\n");
     printf("\trom: name of the rom file.\n");
     printf("\t-b: run the rom until bp_addr.\n");
     printf("\t-d: dump memory zone to a file.\n");
@@ -27,7 +27,6 @@ params* parse_args(int argc, char** argv) {
     new_params->dump_ram = 0;
     new_params->dump_stack = 0;
     new_params->dump_zero = 0;
-    new_params->dump_chrrom = 0;
     new_params->dump_all = 0;
 
     while(i<argc) {
@@ -52,9 +51,6 @@ params* parse_args(int argc, char** argv) {
 	    }
 	    else if(strcmp("zero", argv[i]) == 0) {
 		new_params->dump_zero = 1;
-	    }
-	    else if(strcmp("chrrom", argv[i]) == 0) {
-		new_params->dump_chrrom = 1;
 	    }
 	    else if(strcmp("vram", argv[i]) == 0) {
 		new_params->dump_vram = 1;
@@ -111,8 +107,6 @@ int main(int argc, char** argv) {
 				dump_stack();
 			    if(p->dump_ram)
 				dump_ram();
-			    if(p->dump_chrrom)
-				dump_chrrom();
 			    if(p->dump_all)
 				dump_all();
 			    step();
