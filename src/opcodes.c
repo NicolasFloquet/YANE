@@ -836,6 +836,19 @@ void eor(addr_mode mode) {
 	else
 		CLEAR_SIGN(state->P);
 }
+
+void hlt(addr_mode mode) {
+	cpu_state* state = get_current_cpu_state();
+	switch(mode) {
+	    case AM_NONE:
+			//state->pc = read_memory16(0xfffe);
+			state->cycle += 2; /* +1 si on saute dans la meme page, +2 si on saute sur la page suivante */
+			break;
+	    default:
+			printf("invalid addressing mode");
+	}
+}
+
 void inc(addr_mode mode) {
 	cpu_state* state = get_current_cpu_state();
 	unsigned char src;
@@ -1554,6 +1567,98 @@ void ror(addr_mode mode) {
 	else
 		CLEAR_ZERO(state->P);
 }
+
+void rra(addr_mode mode) {
+	cpu_state* state = get_current_cpu_state();
+	unsigned char src;
+	unsigned char tmp;
+	switch(mode) {
+	    case AM_ZERO:    
+			src = read_memory((int)read_memory(state->pc+1)%0x100);
+			src = src >> 1;
+			write_memory((int)read_memory(state->pc+1), src);
+			
+			state->pc += 2;
+			state->cycle += 5;
+			break;
+		case AM_ZEROX:    
+			src = read_memory(((int)read_memory(state->pc+1) + state->X)%0x100);
+			src = src >> 1;
+			write_memory(((int)read_memory(state->pc+1) + state->X)%0x100, src);
+
+			state->pc += 2;
+			state->cycle += 6;
+			break;
+		case AM_ABS:
+			src = read_memory(read_memory16(state->pc+1) );
+			src = src >> 1;
+			write_memory(read_memory16(state->pc+1), src);
+
+			state->pc += 3;
+			state->cycle += 6;
+			break;
+		case AM_ABSX:
+			src = read_memory( read_memory16(state->pc+1) + state->X );
+			src = src >> 1;
+			write_memory(read_memory16(state->pc+1) + state->X, src);
+
+			state->pc += 3;
+			state->cycle +=7;
+			break;
+		case AM_ABSY:
+			src = read_memory( read_memory16(state->pc+1) + state->Y );
+			src = src >> 1;
+			write_memory(read_memory16(state->pc+1) + state->Y, src);
+			
+			state->pc += 3;
+			state->cycle += 7;
+			break;
+		case AM_INDX:
+			src = read_memory(read_memory16z(((read_memory(state->pc+1)+state->X) & 0xff)));
+			src = src >> 1;
+			write_memory(read_memory16z(((read_memory(state->pc+1)+state->X) & 0xff)), src);
+			
+			state->pc += 2;
+			state->cycle += 8;
+			break;
+		case AM_INDY:
+			src = read_memory(read_memory16z((read_memory(state->pc+1) & 0xff))+(state->Y & 0xff));
+			src = src >> 1;
+			write_memory(read_memory16z((read_memory(state->pc+1) & 0xff))+(state->Y & 0xff), src);
+			
+			state->pc += 2;
+			state->cycle += 8;
+			break;
+	    default:
+			printf("invalid addressing mode");
+	}
+	
+	tmp = src + state->A + GET_CARRY(state->P);
+	
+	if( (tmp & 0xff) ==0)
+		SET_ZERO(state->P);
+	else
+		CLEAR_ZERO(state->P);
+		
+
+	if(tmp & 0x80)
+		SET_SIGN(state->P);
+	else
+		CLEAR_SIGN(state->P);
+		
+	if(!((state->A ^ src) & 0x80) && ((state->A ^ tmp) & 0x80))
+		SET_OVERF(state->P);
+	else
+		CLEAR_OVERF(state->P);
+		
+	if(tmp > 0xff)
+		SET_CARRY(state->P);
+	else
+		CLEAR_CARRY(state->P);		
+
+	state->A = tmp;
+}
+
 void rti(addr_mode mode) {
 	cpu_state* state = get_current_cpu_state();
     	state->P = stack_pop() | 0x20;
@@ -2042,19 +2147,19 @@ void tya(addr_mode mode) {
     state->cycle += 2;
 }
 
-Instruction instruction_list[65]={
+Instruction instruction_list[67]={
 	{"UNK", NULL},
 	{"AAX", aax},
 	{"ADC", adc},{"AND", and},{"ASL", asl},{"BCC", bcc},{"BCS", bcs},
 	{"BEQ", beq},{"BIT", bit},{"BMI", bmi},{"BNE", bne},{"BPL", bpl},
 	{"BRK", brk},{"BVC", bvc},{"BVS", bvs},{"CLC", clc},{"CLD", cld},
 	{"CLI", cli},{"CLV", clv},{"CMP", cmp},{"CPX", cpx},{"CPY", cpy},
-	{"DCP", dcp},{"DEC", dec},{"DEX", dex},{"DEY", dey},{"DOP", dop},{"EOR", eor},
+	{"DCP", dcp},{"DEC", dec},{"DEX", dex},{"DEY", dey},{"DOP", dop},{"EOR", eor},{"HLT", hlt},
 	{"INC", inc},{"INX", inx},{"INY", iny},{"ISC", isc},{"JMP", jmp},{"JSR", jsr},
 	{"LAX", lax},
 	{"LDA", lda},{"LDX", ldx},{"LDY", ldy},{"LSR", lsr},{"NOP", nop},
 	{"ORA", ora},{"PHA", pha},{"PHP", php},{"PLA", pla},{"PLP", plp},
-	{"ROL", rol},{"ROR", ror},{"RTI", rti},{"RTS", rts},{"SBC", sbc},
+	{"ROL", rol},{"ROR", ror},{"RRA",rra},{"RTI", rti},{"RTS", rts},{"SBC", sbc},
 	{"SEC", sec},{"SED", sed},{"SEI", sei},{"SLO", slo},{"SRE", sre},{"STA", sta},{"STX", stx},
 	{"STY", sty},{"TAX", tax},{"TAY", tay},{"TOP", top},{"TSX", tsx},
 	{"TXA", txa},{"TXS", txs},{"TYA", tya}
@@ -2063,7 +2168,7 @@ Instruction instruction_list[65]={
 OpCode opcode_list[0x100]={
 	{0x0, AM_NONE, I_BRK},
 	{0x1, AM_INDX, I_ORA},
-	{0x2,0,0}, /* UNUSED */
+	{0x2, AM_NONE, I_HLT},
 	{0x3, AM_INDX, I_SLO},
 	{0x4, AM_ZERO, I_DOP},
 	{0x5, AM_ZERO, I_ORA},
@@ -2079,7 +2184,7 @@ OpCode opcode_list[0x100]={
 	{0xf, AM_ABS, I_SLO},
 	{0x10, AM_REL, I_BPL},
 	{0x11, AM_INDY, I_ORA},
-	{0x12,0,0},/* UNUSED */
+	{0x12, AM_NONE, I_HLT},
 	{0x13, AM_INDY, I_SLO},
 	{0x14, AM_ZEROX, I_DOP},
 	{0x15, AM_ZEROX, I_ORA},
@@ -2095,7 +2200,7 @@ OpCode opcode_list[0x100]={
 	{0x1f, AM_ABSX, I_SLO},
 	{0x20, AM_ABS, I_JSR},
 	{0x21, AM_INDX, I_AND},
-	{0x22,0,0},/* UNUSED */
+	{0x22, AM_NONE, I_HLT},
 	{0x23,0,0},/* UNUSED */
 	{0x24, AM_ZERO, I_BIT},
 	{0x25, AM_ZERO, I_AND},
@@ -2109,11 +2214,11 @@ OpCode opcode_list[0x100]={
 	{0x2d, AM_ABS, I_AND},
 	{0x2e, AM_ABS, I_ROL},
 	{0x2f,0,0},/* UNUSED */
-	{0x30, AM_REL, I_BMI}, /* ??? */
+	{0x30, AM_REL, I_BMI}, 
 	{0x31, AM_INDY, I_AND},
-	{0x32,0,0},/* UNUSED */
+	{0x32, AM_NONE, I_HLT},
 	{0x33,0,0},/* UNUSED */
-	{0x34, AM_ZEROX, I_DOP},/* UNUSED */
+	{0x34, AM_ZEROX, I_DOP},
 	{0x35, AM_INDX, I_AND},
 	{0x36, AM_ZEROX, I_ROL},
 	{0x37,0,0},/* UNUSED */
@@ -2127,7 +2232,7 @@ OpCode opcode_list[0x100]={
 	{0x3f,0,0},/* UNUSED */
 	{0x40, AM_NONE, I_RTI},
 	{0x41, AM_INDX, I_EOR},
-	{0x42,0,0},/* UNUSED */
+	{0x42, AM_NONE, I_HLT},/* UNUSED */
 	{0x43, AM_INDX, I_SRE},
 	{0x44, AM_ZERO, I_DOP},
 	{0x45, AM_ZERO, I_EOR},
@@ -2143,7 +2248,7 @@ OpCode opcode_list[0x100]={
 	{0x4f, AM_ABS, I_SRE},
 	{0x50, AM_REL, I_BVC},
 	{0x51, AM_INDY, I_EOR},
-	{0x52,0,0},/* UNUSED */
+	{0x52, AM_NONE, I_HLT},
 	{0x53, AM_INDY, I_SRE},
 	{0x54, AM_ZEROX, I_DOP},
 	{0x55, AM_ZEROX, I_EOR},
@@ -2159,55 +2264,55 @@ OpCode opcode_list[0x100]={
 	{0x5f, AM_ABSX, I_SRE}, 
 	{0x60, AM_NONE, I_RTS},
 	{0x61, AM_INDX, I_ADC},
-	{0x62,0,0},/* UNUSED */ 
-	{0x63,0,0},/* UNUSED */ 
-	{0x64, AM_ZERO, I_DOP},/* UNUSED */ 
+	{0x62, AM_NONE, I_HLT},
+	{0x63, AM_INDX, I_RRA},
+	{0x64, AM_ZERO, I_DOP},
 	{0x65, AM_ZERO, I_ADC},
 	{0x66, AM_ZERO, I_ROR},
-	{0x67,0,0},/* UNUSED */ 
+	{0x67, AM_ZERO, I_RRA},
 	{0x68, AM_NONE, I_PLA},
 	{0x69, AM_IMM, I_ADC},
 	{0x6a, AM_NONE, I_ROR},
 	{0x6b,0,0},/* UNUSED */ 
-	{0x6c, AM_REL, I_JMP}, /* UNUSED ???*/ 
+	{0x6c, AM_REL, I_JMP},
 	{0x6d, AM_ABS, I_ADC},
 	{0x6e, AM_ABS, I_ROR},
-	{0x6f,0,0},/* UNUSED */ 
+	{0x6f, AM_ABS, I_RRA},
 	{0x70, AM_REL, I_BVS},
 	{0x71, AM_INDY, I_ADC},
-	{0x72,0,0},/* UNUSED */ 
-	{0x73,0,0},/* UNUSED */ 
-	{0x74, AM_ZEROX, I_DOP},/* UNUSED */ 
+	{0x72, AM_NONE, I_HLT},
+	{0x73, AM_INDY, I_RRA},
+	{0x74, AM_ZEROX, I_DOP},
 	{0x75, AM_ZEROX, I_ADC},
 	{0x76, AM_ZEROX, I_ROR},
-	{0x77,0,0},/* UNUSED */ 
+	{0x77, AM_ZEROX, I_RRA},
 	{0x78, AM_NONE, I_SEI},
 	{0x79, AM_ABSY, I_ADC},
-	{0x7a, AM_NONE, I_NOP},/* UNUSED */ 
-	{0x7b,0,0},/* UNUSED */ 
-	{0x7c, AM_ABSX, I_TOP},/* UNUSED */ 
+	{0x7a, AM_NONE, I_NOP},
+	{0x7b, AM_ABSY, I_RRA},
+	{0x7c, AM_ABSX, I_TOP},
 	{0x7d, AM_ABSX, I_ADC},
 	{0x7e, AM_ABSX, I_ROR},
-	{0x7f,0,0},/* UNUSED */ 
-	{0x80, AM_IMM, I_DOP},/* UNUSED */ 
+	{0x7f, AM_ABSX, I_RRA},
+	{0x80, AM_IMM, I_DOP},
 	{0x81, AM_INDX, I_STA},
-	{0x82, AM_IMM, I_DOP},/* UNUSED */ 
-	{0x83, AM_INDX, I_AAX},/* UNUSED */ 
+	{0x82, AM_IMM, I_DOP},
+	{0x83, AM_INDX, I_AAX},
 	{0x84, AM_ZERO, I_STY},
 	{0x85, AM_ZERO, I_STA},
 	{0x86, AM_ZERO, I_STX},
-	{0x87, AM_ZERO, I_AAX},/* UNUSED */ 
+	{0x87, AM_ZERO, I_AAX},
 	{0x88, AM_NONE, I_DEY},
-	{0x89, AM_IMM, I_DOP},/* UNUSED */ 
+	{0x89, AM_IMM, I_DOP},
 	{0x8a, AM_NONE, I_TXA},
 	{0x8b,0,0},/* UNUSED */ 
 	{0x8c, AM_ABS, I_STY},
 	{0x8d, AM_ABS, I_STA},
 	{0x8e, AM_ABS, I_STX},
-	{0x8f, AM_ABS, I_AAX},/* UNUSED */ 
+	{0x8f, AM_ABS, I_AAX},
 	{0x90, AM_REL, I_BCC},
 	{0x91, AM_INDY, I_STA},
-	{0x92,0,0},
+	{0x92, AM_NONE, I_HLT},
 	{0x93,0,0},
 	{0x94, AM_ZEROX, I_STY},
 	{0x95, AM_ZEROX, I_STA},
@@ -2239,7 +2344,7 @@ OpCode opcode_list[0x100]={
 	{0xaf, AM_ABS, I_LAX},
 	{0xb0, AM_REL, I_BCS},
 	{0xb1, AM_INDY, I_LDA},
-	{0xb2,0,0},
+	{0xb2, AM_NONE, I_HLT},
 	{0xb3, AM_INDY, I_LAX},
 	{0xb4, AM_ZEROX, I_LDY},
 	{0xb5, AM_ZEROX, I_LDA},
@@ -2271,7 +2376,7 @@ OpCode opcode_list[0x100]={
 	{0xcf, AM_ABS, I_DCP},
 	{0xd0, AM_REL, I_BNE},
 	{0xd1, AM_INDX, I_CMP},
-	{0xd2,0,0},
+	{0xd2, AM_NONE, I_HLT},
 	{0xd3, AM_INDY, I_DCP},
 	{0xd4, AM_ZEROX, I_DOP},
 	{0xd5, AM_ZEROX, I_CMP},
@@ -2303,7 +2408,7 @@ OpCode opcode_list[0x100]={
 	{0xef, AM_ABS, I_ISC},
 	{0xf0, AM_REL, I_BEQ},
 	{0xf1, AM_INDX, I_SBC},
-	{0xf2,0,0},
+	{0xf2, AM_NONE, I_HLT},
 	{0xf3, AM_INDY, I_ISC},
 	{0xf4, AM_IMM, I_DOP},
 	{0xf5, AM_ZEROX, I_SBC},

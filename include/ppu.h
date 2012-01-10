@@ -40,12 +40,16 @@ typedef struct {
 	/* Sprite RAM */
 	sprite_info* spr_ram;
 	
+	/* Scanline counter */
+	int scanline;
+	
 	/* Misc */
 	char vram_addr_counter;	/* Sert à déterminer si on écrit pour la première fois dans vram_addr, étant donné qu'il faut faire deux écritures de 8bit pour écrire une adresse de 16bit */
 }ppu_state;
 
 void ppu_init(params* p);
 void ppu_update();
+void ppu_scanline();
 
 unsigned char ppu_reader(unsigned short int addr);
 void ppu_writer(unsigned short int addr, unsigned char data);

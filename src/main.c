@@ -110,19 +110,20 @@ int main(int argc, char** argv) {
 			    if(p->dump_all)
 				dump_all();
 			    step();
-			    if(i%300 == 0) {
+			    if(i%10 == 0) {
 					i=0;
-					ppu_update(0.0);
+					//ppu_update(0.0);
+					ppu_scanline();
 				}
 				i++;
 			    if(last_pc == get_current_cpu_state()->pc) {
-					printf("static PC\n");
+				//	printf("static PC\n");
 					//exit(0);
 				}
 					
 			    last_pc = get_current_cpu_state()->pc;
 					
-			   // printf("\n");
+			    //printf("\n");
 			}
 		}
 		i=0;
