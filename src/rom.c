@@ -10,6 +10,11 @@ void load_rom(FILE* fd) {
 	/* Load ROM header */
 	rom->header = load_header(fd);
 	
+	if(((rom->header->rom_ctrl1&0xF0)>>4 | (rom->header->rom_ctrl2&0xF0)) != 0) {
+		printf("Mapper %x not supported yet.\n", (rom->header->rom_ctrl1&0xF0)>>4 | (rom->header->rom_ctrl2&0xF0));
+		exit(-1);
+	}
+	
 	/* Load PRG ROM */
 	rom->prg_rom = malloc(rom->header->prg_pcount * PRG_ROM_SIZE);
 	fread(rom->prg_rom, 1, rom->header->prg_pcount * PRG_ROM_SIZE, fd);
