@@ -216,7 +216,7 @@ void asl(addr_mode mode) {
 			state->pc += 2;
 			state->cycle += 5;
 			break;
-	    	case AM_ZEROX:    
+		case AM_ZEROX:    
 			src = read_memory(((int)read_memory(state->pc+1) + state->X)%0x100);
 			write_memory(((int)read_memory(state->pc+1) + state->X)%0x100, src << 1);
 
@@ -385,6 +385,22 @@ void bpl(addr_mode mode) {
 			printf("invalid addressing mode");
 	}
 }
+
+void brk(addr_mode mode) {
+	cpu_state* state = get_current_cpu_state();
+	switch(mode) {
+	    case AM_NONE:
+			stack_push(state->P);
+			stack_push(state->pc & 0xFF);
+			stack_push((state->pc>>8) & 0xFF);
+			state->pc = read_memory16(0xfffe);
+			state->cycle += 2; /* +1 si on saute dans la meme page, +2 si on saute sur la page suivante */
+			break;
+	    default:
+			printf("invalid addressing mode");
+	}
+}
+
 void bvc(addr_mode mode) {
 	cpu_state* state = get_current_cpu_state();
 	switch(mode) {
@@ -602,6 +618,78 @@ void cpy(addr_mode mode) {
 	    CLEAR_SIGN(state->P);
 	}	
 }
+
+void dcp(addr_mode mode) {
+	cpu_state* state = get_current_cpu_state();
+	unsigned char src;
+	switch(mode) {
+	    case AM_ZERO:    
+			src = read_memory((int)read_memory(state->pc+1)%0x100);
+			write_memory((int)read_memory(state->pc+1), src-1);
+
+			state->pc += 2;
+			state->cycle += 5;
+			break;
+		case AM_ZEROX:    
+			src = read_memory(((int)read_memory(state->pc+1) + state->X)%0x100);
+			write_memory(((int)read_memory(state->pc+1) + state->X)%0x100, src-1);
+
+			state->pc += 2;
+			state->cycle += 6;
+			break;
+		case AM_ABS:
+			src = read_memory(read_memory16(state->pc+1) );
+			write_memory(read_memory16(state->pc+1), src-1);
+
+			state->pc += 3;
+			state->cycle += 6;
+			break;
+		case AM_ABSX:
+			src = read_memory( read_memory16(state->pc+1) + state->X );
+			write_memory(read_memory16(state->pc+1) + state->X, src-1);
+
+			state->pc += 3;
+			state->cycle +=7;
+			break;
+		case AM_ABSY:
+			src = read_memory( read_memory16(state->pc+1) + state->Y );
+			write_memory(read_memory16(state->pc+1) + state->Y, src-1);
+			state->pc += 3;
+			state->cycle += 7;
+			break;
+		case AM_INDX:
+			src = read_memory(read_memory16z(((read_memory(state->pc+1)+state->X) & 0xff)));
+			write_memory(read_memory16z(((read_memory(state->pc+1)+state->X) & 0xff)), src-1);
+			state->pc += 2;
+			state->cycle += 8;
+			break;
+		case AM_INDY:
+			src = read_memory(read_memory16z((read_memory(state->pc+1) & 0xff))+(state->Y & 0xff));
+			write_memory(read_memory16z((read_memory(state->pc+1) & 0xff))+(state->Y & 0xff), src-1);
+			state->pc += 2;
+			state->cycle += 8;
+			break;
+	    default:
+			printf("invalid addressing mode");
+	}
+	
+	printf("\t%x => %x", src, src-1 );
+	/*
+	if(src & 0x1)
+		SET_CARRY(state->P);
+	else
+		CLEAR_CARRY(state->P);
+*/
+
+		CLEAR_ZERO(state->P);
+
+	if((src-1) & 0x80)
+		CLEAR_SIGN(state->P);
+	else
+		SET_SIGN(state->P);
+		
+}
+
 void dec(addr_mode mode) {
 	cpu_state* state = get_current_cpu_state();
 	unsigned char src;
@@ -627,7 +715,7 @@ void dec(addr_mode mode) {
 			state->pc += 3;
 			state->cycle += 6;
 			break;
-	    	case AM_ABSX:
+	    case AM_ABSX:
 			src = read_memory( read_memory16(state->pc+1) + state->X );
 			write_memory(read_memory16(state->pc+1) + state->X, src-1);
 
@@ -829,6 +917,89 @@ void iny(addr_mode mode) {
 	state->pc += 1;
 	state->cycle += 2;
 }
+
+void isc(addr_mode mode) {
+	cpu_state* state = get_current_cpu_state();
+	unsigned char src;
+	switch(mode) {
+	    case AM_ZERO:    
+			src = read_memory((int)read_memory(state->pc+1)%0x100);
+			
+			write_memory((int)read_memory(state->pc+1), src+1);
+			state->A -= src+1+GET_OVERF(state->P);
+
+			state->pc += 2;
+			state->cycle += 5;
+			break;
+	    case AM_ZEROX:    
+			src = read_memory(((int)read_memory(state->pc+1) + state->X)%0x100);
+			
+			write_memory(((int)read_memory(state->pc+1) + state->X)%0x100, src+1);
+			state->A -= src+1+GET_OVERF(state->P);
+
+			state->pc += 2;
+			state->cycle += 6;
+			break;
+		case AM_ABS:
+			src = read_memory(read_memory16(state->pc+1) );
+			
+			write_memory(read_memory16(state->pc+1), src+1);
+			state->A -= src+1+GET_OVERF(state->P);
+
+			state->pc += 3;
+			state->cycle += 6;
+			break;
+	    case AM_ABSX:
+			src = read_memory( read_memory16(state->pc+1) + state->X );
+			
+			write_memory(read_memory16(state->pc+1) + state->X, src+1);
+			state->A -= src+1+GET_OVERF(state->P);
+
+			state->pc += 3;
+			state->cycle +=7;
+			break;
+	    case AM_ABSY:
+			src = read_memory( read_memory16(state->pc+1) + state->Y );
+			
+			write_memory( read_memory16(state->pc+1) + state->Y, src+1);
+			state->A -= src+1+GET_OVERF(state->P);
+
+			state->pc += 3;
+			state->cycle +=7;
+			break;
+		case AM_INDX:
+			src = read_memory(read_memory16z(((read_memory(state->pc+1)+state->X) & 0xff)));
+			
+			write_memory(read_memory16z(((read_memory(state->pc+1)+state->X) & 0xff)), src+1);
+			state->A -= src+1+GET_OVERF(state->P);
+			
+			state->pc += 2;
+			state->cycle += 8;
+			break;
+		case AM_INDY:
+			src = read_memory(read_memory16z((read_memory(state->pc+1) & 0xff))+ (state->Y & 0xff));
+			
+			write_memory(read_memory16z((read_memory(state->pc+1) & 0xff))+ (state->Y & 0xff), src+1);
+			state->A -= src+1+GET_OVERF(state->P);
+			
+			state->pc += 2;
+			state->cycle += 8; /* *** "Add 1 when page boundary is crossed." *** */
+			break;
+	    default:
+		printf("invalid addressing mode");
+	}
+
+	if(state->A == 0x0)
+		SET_ZERO(state->P);
+	else
+		CLEAR_ZERO(state->P);
+
+	if(state->A & 0x80)
+		SET_SIGN(state->P);
+	else
+		CLEAR_SIGN(state->P);
+}
+
 void lax(addr_mode mode) {
 	cpu_state* state = get_current_cpu_state();
 	switch(mode) {
@@ -1497,6 +1668,189 @@ void sei(addr_mode mode) {
     state->pc += 1;
     state->cycle += 2;
 }
+
+void slo(addr_mode mode) {
+	cpu_state* state = get_current_cpu_state();
+	unsigned char src;
+	switch(mode) {
+	    case AM_ZERO:    
+			src = read_memory((int)read_memory(state->pc+1)%0x100);
+			src = src << 1;
+			write_memory((int)read_memory(state->pc+1), src);
+			state->A = state->A | src;
+			
+			state->pc += 2;
+			state->cycle += 5;
+			break;
+		case AM_ZEROX:    
+			src = read_memory(((int)read_memory(state->pc+1) + state->X)%0x100);
+			src = src << 1;
+			write_memory(((int)read_memory(state->pc+1) + state->X)%0x100, src);
+			state->A = state->A | src;
+
+			state->pc += 2;
+			state->cycle += 6;
+			break;
+		case AM_ABS:
+			src = read_memory(read_memory16(state->pc+1) );
+			src = src << 1;
+			write_memory(read_memory16(state->pc+1), src);
+			state->A = state->A | src;
+
+			state->pc += 3;
+			state->cycle += 6;
+			break;
+		case AM_ABSX:
+			src = read_memory( read_memory16(state->pc+1) + state->X );
+			src = src << 1;
+			write_memory(read_memory16(state->pc+1) + state->X, src);
+			state->A = state->A | src;
+
+			state->pc += 3;
+			state->cycle +=7;
+			break;
+		case AM_ABSY:
+			src = read_memory( read_memory16(state->pc+1) + state->Y );
+			src = src << 1;
+			write_memory(read_memory16(state->pc+1) + state->Y, src);
+			state->A = state->A | src;
+			
+			state->pc += 3;
+			state->cycle += 7;
+			break;
+		case AM_INDX:
+			src = read_memory(read_memory16z(((read_memory(state->pc+1)+state->X) & 0xff)));
+			src = src << 1;
+			write_memory(read_memory16z(((read_memory(state->pc+1)+state->X) & 0xff)), src);
+			state->A = state->A | src;
+			
+			state->pc += 2;
+			state->cycle += 8;
+			break;
+		case AM_INDY:
+			src = read_memory(read_memory16z((read_memory(state->pc+1) & 0xff))+(state->Y & 0xff));
+			src = src << 1;
+			write_memory(read_memory16z((read_memory(state->pc+1) & 0xff))+(state->Y & 0xff), src);
+			state->A = state->A | src;
+			
+			state->pc += 2;
+			state->cycle += 8;
+			break;
+	    default:
+			printf("invalid addressing mode");
+	}
+	
+	printf("\t%x => %x", src, src-1 );
+	
+	if(state->A & 0x1)
+		SET_CARRY(state->P);
+	else
+		CLEAR_CARRY(state->P);
+
+
+	if(state->A==0)
+		SET_ZERO(state->P);
+	else
+		CLEAR_ZERO(state->P);
+
+	if(state->A & 0x80)
+		CLEAR_SIGN(state->P);
+	else
+		SET_SIGN(state->P);
+		
+}
+
+void sre(addr_mode mode) {
+	cpu_state* state = get_current_cpu_state();
+	unsigned char src;
+	switch(mode) {
+	    case AM_ZERO:    
+			src = read_memory((int)read_memory(state->pc+1)%0x100);
+			src = src >> 1;
+			write_memory((int)read_memory(state->pc+1), src);
+			state->A = state->A ^ src;
+			
+			state->pc += 2;
+			state->cycle += 5;
+			break;
+		case AM_ZEROX:    
+			src = read_memory(((int)read_memory(state->pc+1) + state->X)%0x100);
+			src = src >> 1;
+			write_memory(((int)read_memory(state->pc+1) + state->X)%0x100, src);
+			state->A = state->A ^ src;
+
+			state->pc += 2;
+			state->cycle += 6;
+			break;
+		case AM_ABS:
+			src = read_memory(read_memory16(state->pc+1) );
+			src = src >> 1;
+			write_memory(read_memory16(state->pc+1), src);
+			state->A = state->A ^ src;
+
+			state->pc += 3;
+			state->cycle += 6;
+			break;
+		case AM_ABSX:
+			src = read_memory( read_memory16(state->pc+1) + state->X );
+			src = src >> 1;
+			write_memory(read_memory16(state->pc+1) + state->X, src);
+			state->A = state->A ^ src;
+
+			state->pc += 3;
+			state->cycle +=7;
+			break;
+		case AM_ABSY:
+			src = read_memory( read_memory16(state->pc+1) + state->Y );
+			src = src >> 1;
+			write_memory(read_memory16(state->pc+1) + state->Y, src);
+			state->A = state->A ^ src;
+			
+			state->pc += 3;
+			state->cycle += 7;
+			break;
+		case AM_INDX:
+			src = read_memory(read_memory16z(((read_memory(state->pc+1)+state->X) & 0xff)));
+			src = src >> 1;
+			write_memory(read_memory16z(((read_memory(state->pc+1)+state->X) & 0xff)), src);
+			state->A = state->A ^ src;
+			
+			state->pc += 2;
+			state->cycle += 8;
+			break;
+		case AM_INDY:
+			src = read_memory(read_memory16z((read_memory(state->pc+1) & 0xff))+(state->Y & 0xff));
+			src = src >> 1;
+			write_memory(read_memory16z((read_memory(state->pc+1) & 0xff))+(state->Y & 0xff), src);
+			state->A = state->A ^ src;
+			
+			state->pc += 2;
+			state->cycle += 8;
+			break;
+	    default:
+			printf("invalid addressing mode");
+	}
+	
+	printf("\t%x => %x", src, src-1 );
+	
+	if(state->A & 0x1)
+		SET_CARRY(state->P);
+	else
+		CLEAR_CARRY(state->P);
+
+
+	if(state->A==0)
+		SET_ZERO(state->P);
+	else
+		CLEAR_ZERO(state->P);
+
+	if(state->A & 0x80)
+		CLEAR_SIGN(state->P);
+	else
+		SET_SIGN(state->P);
+		
+}
+
 void sta(addr_mode mode) {
 	cpu_state* state = get_current_cpu_state();
 	switch(mode) {
@@ -1687,20 +2041,20 @@ void tya(addr_mode mode) {
     state->cycle += 2;
 }
 
-Instruction instruction_list[61]={
+Instruction instruction_list[65]={
 	{"UNK", NULL},
 	{"AAX", aax},
 	{"ADC", adc},{"AND", and},{"ASL", asl},{"BCC", bcc},{"BCS", bcs},
 	{"BEQ", beq},{"BIT", bit},{"BMI", bmi},{"BNE", bne},{"BPL", bpl},
-	{"BRK", NULL},{"BVC", bvc},{"BVS", bvs},{"CLC", clc},{"CLD", cld},
+	{"BRK", brk},{"BVC", bvc},{"BVS", bvs},{"CLC", clc},{"CLD", cld},
 	{"CLI", cli},{"CLV", clv},{"CMP", cmp},{"CPX", cpx},{"CPY", cpy},
-	{"DEC", dec},{"DEX", dex},{"DEY", dey},{"DOP", dop},{"EOR", eor},
-	{"INC", inc},{"INX", inx},{"INY", iny},{"JMP", jmp},{"JSR", jsr},
+	{"DCP", dcp},{"DEC", dec},{"DEX", dex},{"DEY", dey},{"DOP", dop},{"EOR", eor},
+	{"INC", inc},{"INX", inx},{"INY", iny},{"ISC", isc},{"JMP", jmp},{"JSR", jsr},
 	{"LAX", lax},
 	{"LDA", lda},{"LDX", ldx},{"LDY", ldy},{"LSR", lsr},{"NOP", nop},
 	{"ORA", ora},{"PHA", pha},{"PHP", php},{"PLA", pla},{"PLP", plp},
 	{"ROL", rol},{"ROR", ror},{"RTI", rti},{"RTS", rts},{"SBC", sbc},
-	{"SEC", sec},{"SED", sed},{"SEI", sei},{"STA", sta},{"STX", stx},
+	{"SEC", sec},{"SED", sed},{"SEI", sei},{"SLO", slo},{"SRE", sre},{"STA", sta},{"STX", stx},
 	{"STY", sty},{"TAX", tax},{"TAY", tay},{"TOP", top},{"TSX", tsx},
 	{"TXA", txa},{"TXS", txs},{"TYA", tya}
 };
@@ -1709,35 +2063,35 @@ OpCode opcode_list[0x100]={
 	{0x0, AM_NONE, I_BRK},
 	{0x1, AM_INDX, I_ORA},
 	{0x2,0,0}, /* UNUSED */
-	{0x3,0,0}, /* UNUSED */
+	{0x3, AM_INDX, I_SLO},
 	{0x4, AM_ZERO, I_DOP},
 	{0x5, AM_ZERO, I_ORA},
 	{0x6, AM_ZERO, I_ASL},
-	{0x7,0,0}, /* UNUSED */
+	{0x7, AM_ZERO, I_SLO},
 	{0x8, AM_NONE, I_PHP},
 	{0x9, AM_IMM, I_ORA},
 	{0xa, AM_NONE, I_ASL},
 	{0xb,0,0}, /* UNUSED */
-	{0xc, AM_ABS, I_TOP}, /* UNUSED */
+	{0xc, AM_ABS, I_TOP}, 
 	{0xd, AM_ABS, I_ORA},
 	{0xe, AM_ABS, I_ASL},
-	{0xf,0,0}, /* UNUSED */
+	{0xf, AM_ABS, I_SLO},
 	{0x10, AM_REL, I_BPL},
 	{0x11, AM_INDY, I_ORA},
 	{0x12,0,0},/* UNUSED */
-	{0x13,0,0},/* UNUSED */
-	{0x14, AM_ZEROX, I_DOP},/* UNUSED */
+	{0x13, AM_INDY, I_SLO},
+	{0x14, AM_ZEROX, I_DOP},
 	{0x15, AM_ZEROX, I_ORA},
 	{0x16, AM_ZEROX, I_ASL},
-	{0x17,0,0},/* UNUSED */
+	{0x17, AM_ZEROX, I_SLO},
 	{0x18, AM_NONE, I_CLC},
 	{0x19, AM_ABSY, I_ORA},
-	{0x1a, AM_NONE, I_NOP},/* UNUSED */
-	{0x1b,0,0},/* UNUSED */
-	{0x1c, AM_ABSX, I_TOP},/* UNUSED */
+	{0x1a, AM_NONE, I_NOP},
+	{0x1b, AM_ABSY, I_SLO},
+	{0x1c, AM_ABSX, I_TOP},
 	{0x1d, AM_ABSX, I_ORA},
 	{0x1e, AM_ABSX, I_ASL},
-	{0x1f,0,0},/* UNUSED */
+	{0x1f, AM_ABSX, I_SLO},
 	{0x20, AM_ABS, I_JSR},
 	{0x21, AM_INDX, I_AND},
 	{0x22,0,0},/* UNUSED */
@@ -1766,18 +2120,18 @@ OpCode opcode_list[0x100]={
 	{0x39, AM_ABSY, I_AND},
 	{0x3a, AM_NONE, I_NOP},/* UNUSED */
 	{0x3b,0,0},/* UNUSED */
-	{0x3c, AM_ABSX, I_TOP},/* UNUSED */
+	{0x3c, AM_ABSX, I_TOP},
 	{0x3d, AM_ABSX, I_AND},
 	{0x3e, AM_ABSX, I_ROL},
 	{0x3f,0,0},/* UNUSED */
 	{0x40, AM_NONE, I_RTI},
 	{0x41, AM_INDX, I_EOR},
 	{0x42,0,0},/* UNUSED */
-	{0x43,0,0},/* UNUSED */
-	{0x44, AM_ZERO, I_DOP},/* UNUSED */
+	{0x43, AM_INDX, I_SRE},
+	{0x44, AM_ZERO, I_DOP},
 	{0x45, AM_ZERO, I_EOR},
 	{0x46, AM_ZERO, I_LSR},
-	{0x47,0,0},/* UNUSED */
+	{0x47, AM_ZERO, I_SRE},
 	{0x48, AM_NONE, I_PHA},
 	{0x49, AM_IMM, I_EOR},
 	{0x4a, AM_NONE, I_LSR},
@@ -1785,23 +2139,23 @@ OpCode opcode_list[0x100]={
 	{0x4c, AM_ABS, I_JMP},
 	{0x4d, AM_ABS, I_EOR},
 	{0x4e, AM_ABS, I_LSR},
-	{0x4f,0,0},/* UNUSED */
+	{0x4f, AM_ABS, I_SRE},
 	{0x50, AM_REL, I_BVC},
 	{0x51, AM_INDY, I_EOR},
 	{0x52,0,0},/* UNUSED */
-	{0x53,0,0},/* UNUSED */
-	{0x54, AM_ZEROX, I_DOP},/* UNUSED */
+	{0x53, AM_INDY, I_SRE},
+	{0x54, AM_ZEROX, I_DOP},
 	{0x55, AM_ZEROX, I_EOR},
 	{0x56, AM_ZEROX, I_LSR},
-	{0x57,0,0},/* UNUSED */
+	{0x57, AM_ZEROX, I_SRE},
 	{0x58, AM_NONE, I_CLI},
 	{0x59, AM_ABSY, I_EOR},
-	{0x5a, AM_NONE, I_NOP},/* UNUSED */
-	{0x5b,0,0},/* UNUSED */
-	{0x5c, AM_ABSX, I_TOP},/* UNUSED */
+	{0x5a, AM_NONE, I_NOP},
+	{0x5b, AM_ABSY, I_SRE},
+	{0x5c, AM_ABSX, I_TOP},
 	{0x5d, AM_ABSX, I_EOR},
 	{0x5e, AM_ABSX, I_LSR},
-	{0x5f,0,0},/* UNUSED */ 
+	{0x5f, AM_ABSX, I_SRE}, 
 	{0x60, AM_NONE, I_RTS},
 	{0x61, AM_INDX, I_ADC},
 	{0x62,0,0},/* UNUSED */ 
@@ -1901,11 +2255,11 @@ OpCode opcode_list[0x100]={
 	{0xc0, AM_IMM, I_CPY},
 	{0xc1, AM_INDX, I_CMP},
 	{0xc2, AM_IMM, I_DOP},
-	{0xc3,0,0},
+	{0xc3, AM_INDX, I_DCP},
 	{0xc4, AM_ZERO, I_CPY},
 	{0xc5, AM_ZERO, I_CMP},
 	{0xc6, AM_ZERO, I_DEC},
-	{0xc7,0,0},
+	{0xc7, AM_ZERO, I_DCP},
 	{0xc8, AM_NONE, I_INY},
 	{0xc9, AM_IMM, I_CMP},
 	{0xca, AM_NONE, I_DEX},
@@ -1913,55 +2267,55 @@ OpCode opcode_list[0x100]={
 	{0xcc, AM_ABS, I_CPY},
 	{0xcd, AM_ABS, I_CMP},
 	{0xce, AM_ABS, I_DEC},
-	{0xcf,0,0},
+	{0xcf, AM_ABS, I_DCP},
 	{0xd0, AM_REL, I_BNE},
 	{0xd1, AM_INDX, I_CMP},
 	{0xd2,0,0},
-	{0xd3,0,0},
+	{0xd3, AM_INDY, I_DCP},
 	{0xd4, AM_ZEROX, I_DOP},
 	{0xd5, AM_ZEROX, I_CMP},
 	{0xd6, AM_ZEROX, I_DEC},
-	{0xd7,0,0},
+	{0xd7, AM_ZEROX, I_DCP},
 	{0xd8, AM_NONE, I_CLD},
 	{0xd9, AM_ABSY, I_CMP},
 	{0xda, AM_NONE, I_NOP},
-	{0xdb,0,0},
+	{0xdb, AM_ABSY, I_DCP},
 	{0xdc, AM_ABSX, I_TOP},
 	{0xdd, AM_ABSX, I_CMP},
 	{0xde, AM_ABSX, I_DEC},
-	{0xdf,0,0},
+	{0xdf, AM_ABSX, I_DCP},
 	{0xe0, AM_IMM, I_CPX},
 	{0xe1, AM_INDX, I_SBC},
 	{0xe2, AM_IMM, I_DOP},
-	{0xe3,0,0},
+	{0xe3, AM_INDX, I_ISC},
 	{0xe4, AM_ZERO, I_CPX},
 	{0xe5, AM_ZERO, I_SBC},
 	{0xe6, AM_ZERO, I_INC},
-	{0xe7,0,0},
+	{0xe7, AM_ZERO, I_ISC},
 	{0xe8, AM_NONE, I_INX},
 	{0xe9, AM_IMM, I_SBC},
 	{0xea, AM_NONE, I_NOP},
-	{0xeb,0,0},
+	{0xeb, AM_IMM,I_SBC},
 	{0xec, AM_ABS, I_CPX},
 	{0xed, AM_ABS, I_SBC},
 	{0xee, AM_ABS, I_INC},
-	{0xef,0,0},
+	{0xef, AM_ABS, I_ISC},
 	{0xf0, AM_REL, I_BEQ},
 	{0xf1, AM_INDX, I_SBC},
 	{0xf2,0,0},
-	{0xf3,0,0},
+	{0xf3, AM_INDY, I_ISC},
 	{0xf4, AM_IMM, I_DOP},
 	{0xf5, AM_ZEROX, I_SBC},
 	{0xf6, AM_ZEROX, I_INC},
-	{0xf7,0,0},/* UNUSED  (I_INC??)*/ 
+	{0xf7, AM_ZEROX, I_ISC},
 	{0xf8, AM_NONE, I_SED},
 	{0xf9, AM_ABSY, I_SBC},
-	{0xfa, AM_NONE, I_NOP},/* UNUSED */ 
-	{0xfb,0,0},/* UNUSED */ 
-	{0xfc, AM_ABSX, I_TOP},/* UNUSED */ 
+	{0xfa, AM_NONE, I_NOP},
+	{0xfb, AM_ABSY, I_ISC},
+	{0xfc, AM_ABSX, I_TOP},
 	{0xfd, AM_ABSX, I_SBC},
 	{0xfe, AM_ABSX, I_INC},
-	{0xff,0,0},/* UNUSED */ 
+	{0xff, AM_ABSX, I_ISC},
 };
 
 addr_mode get_addr_mode(unsigned char opcode) {
@@ -1971,6 +2325,7 @@ addr_mode get_addr_mode(unsigned char opcode) {
 void exec_instruction(unsigned char opcode) {
     if(instruction_list[opcode_list[opcode].inst].handler == NULL) {
 		printf("%s not implemented.(OPCODE:%X\t)", instruction_list[opcode_list[opcode].inst].name, opcode);
+		//exit(0);
     }
     else {
 		instruction_list[opcode_list[opcode].inst].handler(opcode_list[opcode].mode); 

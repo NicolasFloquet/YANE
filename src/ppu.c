@@ -68,7 +68,7 @@ void put_pixel(unsigned short int x,unsigned short int y,unsigned int color, uns
 }
 
 void put_sprite(unsigned short int x, unsigned short int y, unsigned char index, unsigned char bank, unsigned char scale) {
-	unsigned char* ptr1 = get_current_rom()->chr_rom + (index*16);
+	unsigned char* ptr1 = get_current_rom()->chr_rom +0x1000+(index*16);
 	unsigned char* ptr2 = ptr1+8;
 	char c1,c2;
 	int i,j;
@@ -101,7 +101,7 @@ void dump_chrrom() {
 	SDL_Flip(screen);
 }
 
-void ppu_init() {
+void ppu_init(params* p) {
 	vram = malloc(0x3fff);
 	spr_ram = malloc(sizeof(sprite_info) * 64);
 	ppu_ctrl1 = 0;
@@ -116,7 +116,41 @@ void ppu_init() {
         printf("Erreur lors de l'initialisation de SDL: %s\n", SDL_GetError());
     }
     screen = SDL_SetVideoMode(512, 480, 16, 
-                              SDL_HWSURFACE | SDL_DOUBLEBUF | SDL_ANYFORMAT);
+                              SDL_HWSURFACE | SDL_DOUBLEBUF | SDL_ANYFORMAT);                          
+}
+
+void ppu_update() { 
+
+	char* base_nametable = vram + 0x2000 + (ppu_ctrl1&0x3)*0x0400;
+	unsigned short int base_attribute = base_nametable + PPU_ATTRIBUTE_OFFSET;
+	int sprite;
+	int x,y;
+	int i;
+
+	/* Affichage du background */
+	if(ppu_ctrl2 & 0x08) {
+		for(x=0; x<32; x++) {
+			for(y=0;y<30; y++) {
+				put_sprite(x*8, y*8, base_nametable[x+(y*32)], ppu_ctrl1 & 0x10>>4, 2);
+			}
+		}
+	}
+	
+	/* Affichage des sprites */
+	i = 0;
+	if(ppu_ctrl2 & 0x10) {
+		for(i=0; i<64; i++) {
+			
+			put_sprite(spr_ram[i].x, spr_ram[i].y, spr_ram[i].index, ppu_ctrl1 & 0x80>>3, 2);
+		}
+	}
+	
+	//if(ppu_ctrl2 != 0) 
+		SDL_Flip(screen);
+	if(((ppu_ctrl1 & 0x80) != 0))
+		cpu_nmi();
+		
+	ppu_status |= 0x80; /* VBLank flag */
 }
 
 unsigned char ppu_reader(unsigned short int addr) {
@@ -124,7 +158,9 @@ unsigned char ppu_reader(unsigned short int addr) {
 
 	switch(addr){
 		case PPU_STATUS:
+			printf("PPU Read status\n");
 			ret = ppu_status;
+			ppu_status &= 0x7F; /* Remise à zero du bit de VBlank */
 			break;
 		case VRAM_IO:
 			ret = vram[vram_addr];
@@ -138,19 +174,20 @@ unsigned char ppu_reader(unsigned short int addr) {
 void ppu_writer(unsigned short int addr, unsigned char data) {
 	switch(addr) {
 		case PPU_CTRL1:
-			printf("\tPPU_CTRL1 = %x",data);
+			printf("\tPPU_CTRL1 = %x\n",data);
 			ppu_ctrl1 = data;
 			break;
 		case PPU_CTRL2:
-			printf("\tPPU_CTRL2 = %x",data);
+			printf("\tPPU_CTRL2 = %x\n",data);
 			ppu_ctrl2 = data;
 			break;
 		case SPR_RAM_ADDR:
-			printf("\tSPR_RAM_ADDR = %x",data);
+			printf("\tSPR_RAM_ADDR = %x\n",data);
 			spr_addr = data;
+			//exit(0);
 			break;
 		case SPR_RAM_IO:
-			printf("\twriting SPR_RAM[0x%x] = 0x%x", spr_addr, data);
+			printf("\twriting SPR_RAM[0x%x] = 0x%x\n", spr_addr, data);
 			((char*)spr_ram)[spr_addr] = data;
 			break;
 		case VRAM_SCROLL:
@@ -166,7 +203,7 @@ void ppu_writer(unsigned short int addr, unsigned char data) {
 			}
 			break;
 		case VRAM_IO:
-			printf("\twriting 0x%x at 0x%x",data, vram_addr);
+			//printf("\twriting 0x%x at 0x%x\n",data, vram_addr);
 			vram[vram_addr] = data;
 			if(ppu_ctrl1 & 0x04)
 				vram_addr += 32;
@@ -174,11 +211,11 @@ void ppu_writer(unsigned short int addr, unsigned char data) {
 				vram_addr += 1;
 			break;
 		case SPR_DMA:
-			printf("\tDMA from 0x%x", 0x100*data);
-			exit(-1);
+			printf("\tDMA from 0x%x\n", 0x100*data);
+			//exit(-1);
 			dma_transfer((unsigned short int*) spr_ram, data*(0x100), 256);
 			break;
 		default:
-			printf("\n0x%x is read only!", addr);
+			printf("\n0x%x is read only!\n", addr);
 	}
 }

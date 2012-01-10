@@ -13,7 +13,7 @@ cpu_state* get_current_cpu_state() {
 void create_cpu_state() {
 	cpu_state* state = malloc(sizeof(cpu_state));
 	
-	state->pc = read_memory16(0xfffc);/* à voir */
+	state->pc = read_memory16(0xfffc); /* à voir */
 	state->sp = 0xFD;
 	state->A = 0;
 	state->X = 0;
@@ -28,18 +28,34 @@ void create_cpu_state() {
 }
 
 void print_cpu_state() {
-	printf("A=0x%x X=0x%x Y=0x%x P=0x%x SP=0x%x", 
+	printf("A=0x%x X=0x%x Y=0x%x P=0x%x SP=0x%x CY=%d", 
 							    current_state->A,
 							    current_state->X,
 							    current_state->Y,
 							    current_state->P,
-							    current_state->sp);
+							    current_state->sp,
+							    current_state->cycle);
 }
 
 void step() {
 	unsigned char opcode = read_memory(current_state->pc);
-	print_instruction();
+	//print_instruction();
 	exec_instruction(opcode);
+}
+
+void cpu_nmi() {
+	
+	//printf("---NMI---\n");
+	current_state->cycle = 0;
+
+	stack_push(current_state->P);
+	stack_push(current_state->pc & 0xFF);
+	stack_push((current_state->pc>>8) & 0xFF);
+	current_state->pc = read_memory16(0xfffa);
+}
+
+int cpu_get_cycles() {
+	return current_state->cycle;
 }
 
 void runto(unsigned short int addr)

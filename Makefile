@@ -2,7 +2,7 @@ INCLUDES := -Iinclude
 CFLAGS := -Wall -g $(INCLUDES)
 OBJ := obj/
 SRC := src/
-CC := colorgcc
+CC := gcc
 
 OBJECTS=src/main.o src/rom.o src/opcodes.o src/cpu.o src/ppu.o src/memory.o 
 OUTPUT=yane

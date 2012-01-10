@@ -2,25 +2,15 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <common.h>
 #include <cpu.h>
 #include <memory.h>
 #include <opcodes.h>
 #include <ppu.h>
 #include <rom.h>
 
-typedef struct {
-    char* rom_path;
-    unsigned short int breakpoint;
-    int run;
-    int dump_ram;
-    int dump_stack;
-    int dump_zero;
-    int dump_chrrom;
-    int dump_all;
-}params;
-
 void usage() {
-    printf("USAGE:\tyane rom [-b bp_addr] [-d ram|stack|zero|all] [-h]\n");
+    printf("USAGE:\tyane rom [-b bp_addr] [-d ram|stack|zero|chrrom|vram|all] [-h]\n");
     printf("\trom: name of the rom file.\n");
     printf("\t-b: run the rom until bp_addr.\n");
     printf("\t-d: dump memory zone to a file.\n");
@@ -66,6 +56,9 @@ params* parse_args(int argc, char** argv) {
 	    else if(strcmp("chrrom", argv[i]) == 0) {
 		new_params->dump_chrrom = 1;
 	    }
+	    else if(strcmp("vram", argv[i]) == 0) {
+		new_params->dump_vram = 1;
+	    }
 	    else if(strcmp("all", argv[i]) == 0) {
 		new_params->dump_all = 1;
 	    }
@@ -85,7 +78,7 @@ params* parse_args(int argc, char** argv) {
     }
 
     if(new_params->rom_path == NULL)
-	new_params->rom_path = strdup("./rom/test.nes");
+		new_params->rom_path = strdup("./rom/test.nes");
 
     return new_params;
 }
@@ -93,6 +86,7 @@ params* parse_args(int argc, char** argv) {
 int main(int argc, char** argv) {
 	FILE* fd = NULL; 
 	params* p;
+	int i;
 
 	p = parse_args(argc, argv);
 
@@ -101,7 +95,7 @@ int main(int argc, char** argv) {
 	if(fd != NULL) {
 		load_rom(fd);
 		init_ram();
-		ppu_init();
+		ppu_init(p);
 		create_cpu_state();
 
 		if(p->breakpoint != 0) {
@@ -109,6 +103,7 @@ int main(int argc, char** argv) {
 			runto(p->breakpoint);
 		}
 		if(p->run == 1) {
+			i=0;
 			while(1) {
 			    if(p->dump_zero)
 				dump_zero();
@@ -121,13 +116,22 @@ int main(int argc, char** argv) {
 			    if(p->dump_all)
 				dump_all();
 			    step();
-			    if(last_pc == get_current_cpu_state()->pc)
-				exit(0);
+			    if(i%300 == 0) {
+					i=0;
+					ppu_update(0.0);
+				}
+				i++;
+			    if(last_pc == get_current_cpu_state()->pc) {
+					printf("static PC\n");
+					//exit(0);
+				}
+					
 			    last_pc = get_current_cpu_state()->pc;
-			    printf("\n");
+					
+			   // printf("\n");
 			}
 		}
-
+		i=0;
 		while(1){
 		    
 		    if(p->dump_zero)
@@ -138,6 +142,13 @@ int main(int argc, char** argv) {
 			dump_ram();
 		    if(p->dump_all)
 			dump_all();
+			
+			if(i%10 == 0) {
+				i=0;
+				ppu_update(0.0);
+			}
+			i++;
+			
 		    step();
 
 		    while (getchar() != '\n');
