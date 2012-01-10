@@ -2,24 +2,13 @@
 #include <stdlib.h>
 
 #include <ppu.h>
+#include <cpu.h>
 #include <memory.h>
 #include <rom.h>
 
 #include <SDL/SDL.h>
 
-static char* vram = NULL;
-
-static sprite_info* spr_ram = NULL;
-
-static char ppu_ctrl1;
-static char ppu_ctrl2;
-
-static unsigned short int spr_addr;
-
-static unsigned short int vram_addr;
-static char vram_addr_counter;
-
-static char ppu_status;
+static ppu_state* state = NULL;
 
 /* tmp */
 static SDL_Surface * screen;
@@ -102,14 +91,16 @@ void dump_chrrom() {
 }
 
 void ppu_init(params* p) {
-	vram = malloc(0x3fff);
-	spr_ram = malloc(sizeof(sprite_info) * 64);
-	ppu_ctrl1 = 0;
-	ppu_ctrl2 = 0;
-	spr_addr = 0;
-	vram_addr = 0;
-	vram_addr_counter = 0;
-	ppu_status = 0x80;
+	state = malloc(sizeof(ppu_state));
+	
+	state->vram = malloc(0x3fff);
+	state->spr_ram = malloc(sizeof(sprite_info) * 64);
+	state->ppu_ctrl1 = 0;
+	state->ppu_ctrl2 = 0;
+	state->spr_addr = 0;
+	state->vram_addr = 0;
+	state->vram_addr_counter = 0;
+	state->ppu_status = 0x80;
 	
 	if (SDL_Init(SDL_INIT_VIDEO) == -1)
     {
@@ -121,36 +112,43 @@ void ppu_init(params* p) {
 
 void ppu_update() { 
 
-	char* base_nametable = vram + 0x2000 + (ppu_ctrl1&0x3)*0x0400;
-	unsigned short int base_attribute = base_nametable + PPU_ATTRIBUTE_OFFSET;
-	int sprite;
+	char* base_nametable = state->vram + 0x2000 + (state->ppu_ctrl1&0x3)*0x0400;
+	//unsigned short int base_attribute = base_nametable + PPU_ATTRIBUTE_OFFSET;
 	int x,y;
 	int i;
 
 	/* Affichage du background */
-	if(ppu_ctrl2 & 0x08) {
+	if(state->ppu_ctrl2 & 0x08) {
 		for(x=0; x<32; x++) {
 			for(y=0;y<30; y++) {
-				put_sprite(x*8, y*8, base_nametable[x+(y*32)], ppu_ctrl1 & 0x10>>4, 2);
+				put_sprite(x*8,	/* Coord X */
+						   y*8,	/* Coord Y */
+						   base_nametable[x+(y*32)],	/* Sprite Index */
+						   state->ppu_ctrl1 & 0x10>>4,	/* Partern table selector */
+						   2); /* Scale */
 			}
 		}
 	}
 	
 	/* Affichage des sprites */
 	i = 0;
-	if(ppu_ctrl2 & 0x10) {
+	if(state->ppu_ctrl2 & 0x10) {
 		for(i=0; i<64; i++) {
 			
-			put_sprite(spr_ram[i].x, spr_ram[i].y, spr_ram[i].index, ppu_ctrl1 & 0x80>>3, 2);
+			put_sprite(state->spr_ram[i].x, /* Coord X */
+					   state->spr_ram[i].y, /* Coord Y */
+					   state->spr_ram[i].index, /* Sprite Index */
+					   state->ppu_ctrl1 & 0x80>>3, /* Partern table selector */
+					   2); /* Scale */
 		}
 	}
 	
 	//if(ppu_ctrl2 != 0) 
 		SDL_Flip(screen);
-	if(((ppu_ctrl1 & 0x80) != 0))
+	if(((state->ppu_ctrl1 & 0x80) != 0))
 		cpu_nmi();
 		
-	ppu_status |= 0x80; /* VBLank flag */
+	state->ppu_status |= 0x80; /* VBLank flag */
 }
 
 unsigned char ppu_reader(unsigned short int addr) {
@@ -159,11 +157,11 @@ unsigned char ppu_reader(unsigned short int addr) {
 	switch(addr){
 		case PPU_STATUS:
 			printf("PPU Read status\n");
-			ret = ppu_status;
-			ppu_status &= 0x7F; /* Remise à zero du bit de VBlank */
+			ret = state->ppu_status;
+			state->ppu_status &= 0x7F; /* Remise à zero du bit de VBlank */
 			break;
 		case VRAM_IO:
-			ret = vram[vram_addr];
+			ret = state->vram[state->vram_addr];
 			break;
 		default:
 			printf("\n0x%x is write only!", addr);
@@ -175,45 +173,45 @@ void ppu_writer(unsigned short int addr, unsigned char data) {
 	switch(addr) {
 		case PPU_CTRL1:
 			printf("\tPPU_CTRL1 = %x\n",data);
-			ppu_ctrl1 = data;
+			state->ppu_ctrl1 = data;
 			break;
 		case PPU_CTRL2:
 			printf("\tPPU_CTRL2 = %x\n",data);
-			ppu_ctrl2 = data;
+			state->ppu_ctrl2 = data;
 			break;
 		case SPR_RAM_ADDR:
 			printf("\tSPR_RAM_ADDR = %x\n",data);
-			spr_addr = data;
+			state->spr_addr = data;
 			//exit(0);
 			break;
 		case SPR_RAM_IO:
-			printf("\twriting SPR_RAM[0x%x] = 0x%x\n", spr_addr, data);
-			((char*)spr_ram)[spr_addr] = data;
+			printf("\twriting SPR_RAM[0x%x] = 0x%x\n", state->spr_addr, data);
+			((char*)state->spr_ram)[(unsigned int)state->spr_addr] = data;
 			break;
 		case VRAM_SCROLL:
 			break;
 		case VRAM_ADDR:
-			if(vram_addr_counter == 0) {
-				vram_addr = data<<8;
-				vram_addr_counter = 1;
+			if(state->vram_addr_counter == 0) {
+				state->vram_addr = data<<8;
+				state->vram_addr_counter = 1;
 			}			
 			else {
-				vram_addr |= data;
-				vram_addr_counter = 0;
+				state->vram_addr |= data;
+				state->vram_addr_counter = 0;
 			}
 			break;
 		case VRAM_IO:
 			//printf("\twriting 0x%x at 0x%x\n",data, vram_addr);
-			vram[vram_addr] = data;
-			if(ppu_ctrl1 & 0x04)
-				vram_addr += 32;
+			state->vram[state->vram_addr] = data;
+			if(state->ppu_ctrl1 & 0x04)
+				state->vram_addr += 32;
 			else
-				vram_addr += 1;
+				state->vram_addr += 1;
 			break;
 		case SPR_DMA:
 			printf("\tDMA from 0x%x\n", 0x100*data);
 			//exit(-1);
-			dma_transfer((unsigned short int*) spr_ram, data*(0x100), 256);
+			dma_transfer((unsigned short int*) state->spr_ram, data*(0x100), 256);
 			break;
 		default:
 			printf("\n0x%x is read only!\n", addr);
