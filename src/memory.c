@@ -22,8 +22,8 @@ static const memory_zone memory_map[] = {
     {0x0100, 0x01ff, "stack", ram_read, ram_write},
     {0x0200, 0x07ff, "RAM", ram_read, ram_write},
     {0x0800, 0x1fff, "RAM mirror", ram_read, ram_write},
-    {0x2000, 0x2007, "IO regs (PPU)", ppu_reader, ppu_writer},
-    {0x2008, 0x3fff, "IO mirror", NULL, NULL},
+    {0x2000, 0x2007, "PPU regs", ppu_reader, ppu_writer},
+    {0x2008, 0x3fff, "PPU regs mirror", ppu_reader, ppu_writer},
     {0x4000, 0x4013, "IO regs2", NULL, NULL},
     {0x4014, 0x4014, "DMA reg", NULL, ppu_writer},
     {0x4015, 0x4017, "IO regs2", NULL, NULL},
@@ -78,11 +78,10 @@ char* zone_name(unsigned short int addr) {
 char read_memory(unsigned short int addr) {
     int i = find_zone(addr);
     char ret = 0;
-    //if(memory_map[i].reader == NULL)
-	//printf("\nReader for %s is not implemented yet.", memory_map[i].name);
-    //else
-    if(memory_map[i].reader != NULL)
-	ret = memory_map[i].reader(addr);
+    if(memory_map[i].reader == NULL)
+		printf("\nReader for %s is not implemented yet. (0x%x)", memory_map[i].name, addr);
+    else
+		ret = memory_map[i].reader(addr);
 
     return ret;
 }
@@ -90,9 +89,10 @@ char read_memory(unsigned short int addr) {
 void write_memory(unsigned short int addr, unsigned char data) {
     int i = find_zone(addr);
 
-    if(memory_map[i].writer == NULL)
-	printf("\nWriter for %s is not implemented yet.", memory_map[i].name);
-    else
+    //if(memory_map[i].writer == NULL)
+	//printf("\nWriter for %s is not implemented yet. (0x%x)", memory_map[i].name, addr);
+    //else
+    if(memory_map[i].writer != NULL)
 	memory_map[i].writer(addr,data);
 }
 

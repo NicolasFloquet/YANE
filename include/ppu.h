@@ -16,7 +16,7 @@
 #define PPU_NAMETABLE_BASE 0x2000
 #define PPU_ATTRIBUTE_OFFSET 0x03C0
 
-typedef struct {
+typedef struct __attribute__ ((__packed__)){
 	unsigned char y;
 	unsigned char index;
 	unsigned char attribute;

@@ -65,6 +65,7 @@ typedef enum {
     I_PHP,
     I_PLA,
     I_PLP,
+    I_RLA,
     I_ROL,
     I_ROR,
     I_RRA,

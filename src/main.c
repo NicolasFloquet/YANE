@@ -110,10 +110,11 @@ int main(int argc, char** argv) {
 			    if(p->dump_all)
 				dump_all();
 			    step();
-			    if(i%10 == 0) {
+			    if(i%200 == 0) {
 					i=0;
 					//ppu_update(0.0);
 					ppu_scanline();
+					
 				}
 				i++;
 			    if(last_pc == get_current_cpu_state()->pc) {
@@ -138,12 +139,13 @@ int main(int argc, char** argv) {
 		    if(p->dump_all)
 			dump_all();
 			
-			if(i%10 == 0) {
+			if(i%1 == 0) {
 				i=0;
-				ppu_update(0.0);
+				//ppu_update(0.0);
+				ppu_scanline();
+				
 			}
 			i++;
-			
 		    step();
 
 		    while (getchar() != '\n');

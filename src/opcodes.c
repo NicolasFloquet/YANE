@@ -1405,6 +1405,93 @@ void ora(addr_mode mode) {
 	else
 		CLEAR_SIGN(state->P);
 }
+
+void rla(addr_mode mode) {
+	cpu_state* state = get_current_cpu_state();
+	unsigned char src;
+	unsigned char tmp;
+	switch(mode) {
+	    case AM_ZERO:    
+			src = read_memory((int)read_memory(state->pc+1)%0x100);
+			src = src >> 1;
+			write_memory((int)read_memory(state->pc+1), src);
+			
+			state->pc += 2;
+			state->cycle += 5;
+			break;
+		case AM_ZEROX:    
+			src = read_memory(((int)read_memory(state->pc+1) + state->X)%0x100);
+			src = src >> 1;
+			write_memory(((int)read_memory(state->pc+1) + state->X)%0x100, src);
+
+			state->pc += 2;
+			state->cycle += 6;
+			break;
+		case AM_ABS:
+			src = read_memory(read_memory16(state->pc+1) );
+			src = src >> 1;
+			write_memory(read_memory16(state->pc+1), src);
+
+			state->pc += 3;
+			state->cycle += 6;
+			break;
+		case AM_ABSX:
+			src = read_memory( read_memory16(state->pc+1) + state->X );
+			src = src >> 1;
+			write_memory(read_memory16(state->pc+1) + state->X, src);
+
+			state->pc += 3;
+			state->cycle +=7;
+			break;
+		case AM_ABSY:
+			src = read_memory( read_memory16(state->pc+1) + state->Y );
+			src = src >> 1;
+			write_memory(read_memory16(state->pc+1) + state->Y, src);
+			
+			state->pc += 3;
+			state->cycle += 7;
+			break;
+		case AM_INDX:
+			src = read_memory(read_memory16z(((read_memory(state->pc+1)+state->X) & 0xff)));
+			src = src >> 1;
+			write_memory(read_memory16z(((read_memory(state->pc+1)+state->X) & 0xff)), src);
+			
+			state->pc += 2;
+			state->cycle += 8;
+			break;
+		case AM_INDY:
+			src = read_memory(read_memory16z((read_memory(state->pc+1) & 0xff))+(state->Y & 0xff));
+			src = src >> 1;
+			write_memory(read_memory16z((read_memory(state->pc+1) & 0xff))+(state->Y & 0xff), src);
+			
+			state->pc += 2;
+			state->cycle += 8;
+			break;
+	    default:
+			printf("invalid addressing mode");
+	}
+	
+	tmp = src & state->A ;
+	
+	if( (tmp & 0xff) ==0)
+		SET_ZERO(state->P);
+	else
+		CLEAR_ZERO(state->P);
+		
+
+	if(tmp & 0x80)
+		SET_SIGN(state->P);
+	else
+		CLEAR_SIGN(state->P);
+		
+	if(tmp > 0xff)
+		SET_CARRY(state->P);
+	else
+		CLEAR_CARRY(state->P);		
+
+	state->A = tmp;
+}
+
 void rol(addr_mode mode) {
 	cpu_state* state = get_current_cpu_state();
 	unsigned char src;
@@ -2147,7 +2234,7 @@ void tya(addr_mode mode) {
     state->cycle += 2;
 }
 
-Instruction instruction_list[67]={
+Instruction instruction_list[68]={
 	{"UNK", NULL},
 	{"AAX", aax},
 	{"ADC", adc},{"AND", and},{"ASL", asl},{"BCC", bcc},{"BCS", bcs},
@@ -2158,7 +2245,7 @@ Instruction instruction_list[67]={
 	{"INC", inc},{"INX", inx},{"INY", iny},{"ISC", isc},{"JMP", jmp},{"JSR", jsr},
 	{"LAX", lax},
 	{"LDA", lda},{"LDX", ldx},{"LDY", ldy},{"LSR", lsr},{"NOP", nop},
-	{"ORA", ora},{"PHA", pha},{"PHP", php},{"PLA", pla},{"PLP", plp},
+	{"ORA", ora},{"PHA", pha},{"PHP", php},{"PLA", pla},{"PLP", plp},{"RLA",rla},
 	{"ROL", rol},{"ROR", ror},{"RRA",rra},{"RTI", rti},{"RTS", rts},{"SBC", sbc},
 	{"SEC", sec},{"SED", sed},{"SEI", sei},{"SLO", slo},{"SRE", sre},{"STA", sta},{"STX", stx},
 	{"STY", sty},{"TAX", tax},{"TAY", tay},{"TOP", top},{"TSX", tsx},
@@ -2201,11 +2288,11 @@ OpCode opcode_list[0x100]={
 	{0x20, AM_ABS, I_JSR},
 	{0x21, AM_INDX, I_AND},
 	{0x22, AM_NONE, I_HLT},
-	{0x23,0,0},/* UNUSED */
+	{0x23, AM_INDY, I_RLA},
 	{0x24, AM_ZERO, I_BIT},
 	{0x25, AM_ZERO, I_AND},
 	{0x26, AM_ZERO, I_ROL},
-	{0x27,0,0},/* UNUSED */
+	{0x27, AM_ZERO, I_RLA},
 	{0x28, AM_NONE, I_PLP},
 	{0x29, AM_IMM, I_AND},
 	{0x2a, AM_NONE, I_ROL},
@@ -2213,23 +2300,23 @@ OpCode opcode_list[0x100]={
 	{0x2c, AM_ABS, I_BIT},
 	{0x2d, AM_ABS, I_AND},
 	{0x2e, AM_ABS, I_ROL},
-	{0x2f,0,0},/* UNUSED */
+	{0x2f, AM_ABS, I_RLA},
 	{0x30, AM_REL, I_BMI}, 
 	{0x31, AM_INDY, I_AND},
 	{0x32, AM_NONE, I_HLT},
-	{0x33,0,0},/* UNUSED */
+	{0x33, AM_INDY, I_RLA},
 	{0x34, AM_ZEROX, I_DOP},
 	{0x35, AM_INDX, I_AND},
 	{0x36, AM_ZEROX, I_ROL},
-	{0x37,0,0},/* UNUSED */
+	{0x37, AM_ZEROX, I_RLA},
 	{0x38, AM_NONE, I_SEC},
 	{0x39, AM_ABSY, I_AND},
-	{0x3a, AM_NONE, I_NOP},/* UNUSED */
-	{0x3b,0,0},/* UNUSED */
+	{0x3a, AM_NONE, I_NOP},
+	{0x3b, AM_ABSY, I_RLA},
 	{0x3c, AM_ABSX, I_TOP},
 	{0x3d, AM_ABSX, I_AND},
 	{0x3e, AM_ABSX, I_ROL},
-	{0x3f,0,0},/* UNUSED */
+	{0x3f, AM_ABSX, I_RLA},
 	{0x40, AM_NONE, I_RTI},
 	{0x41, AM_INDX, I_EOR},
 	{0x42, AM_NONE, I_HLT},/* UNUSED */
